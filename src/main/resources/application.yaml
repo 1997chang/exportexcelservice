@@ -1,0 +1,9 @@
+export:
+  excel:
+    service:
+      threadpool:
+        corePoolSize: 4
+        maxPoolSize: 100
+        queueCapacity: 1000
+        keepAlive: 300
+        prefix: exportExcel

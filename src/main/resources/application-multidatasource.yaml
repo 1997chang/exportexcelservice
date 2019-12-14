@@ -1,0 +1,54 @@
+spring:
+  datasource:
+    excel:
+      multi:
+        one:
+          username: root
+          password: Mysql@106966
+          url: jdbc:mysql://localhost:3306/test
+          filters: wall,stat
+          stat-view-servlet:
+            enabled: true
+            url-pattern: /druid/*
+          initial-size: 5
+          max-active: 30
+          max-wait: 6000
+          test-on-borrow: false
+          test-while-idle: true
+          test-on-return: false
+          time-between-eviction-runs-millis: 60000
+          min-evictable-idle-time-millis: 300000
+          validation-query: select 1
+          filter:
+            stat:
+              merge-sql: true
+              slow-sql-millis: 5000
+              log-slow-sql: true
+            wall:
+              config:
+                multi-statement-allow: true
+        two:
+          username: root
+          password: Mysql@106966
+          url: jdbc:mysql://localhost:3306/test2
+          filters: wall,stat
+          stat-view-servlet:
+            enabled: true
+            url-pattern: /druid/*
+          initial-size: 5
+          max-active: 30
+          max-wait: 6000
+          test-on-borrow: false
+          test-while-idle: true
+          test-on-return: false
+          time-between-eviction-runs-millis: 60000
+          min-evictable-idle-time-millis: 300000
+          validation-query: select 1
+          filter:
+            stat:
+              merge-sql: true
+              slow-sql-millis: 5000
+              log-slow-sql: true
+            wall:
+              config:
+                multi-statement-allow: true

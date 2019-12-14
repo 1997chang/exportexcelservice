@@ -1,6 +1,6 @@
 package com.viewshine.exportexcel.config;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import com.viewshine.exportexcel.properties.ExportExcelProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
@@ -12,9 +12,13 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 public class ExportExcelConfig {
 
+    /**
+     * 使用多线程进行Excel的下载本地，或者直接通过浏览器下载
+     * @param exportExcelProperties
+     * @return
+     */
     @Bean
-    @ConditionalOnBean(value = ExportExcelProperties.class)
-    public TaskExecutor taskExecutor(ExportExcelProperties exportExcelProperties) {
+    public TaskExecutor exportExcelTaskExecutor(ExportExcelProperties exportExcelProperties) {
         ThreadPoolTaskExecutor threadPoolTaskExecutor = new ThreadPoolTaskExecutor();
         threadPoolTaskExecutor.setCorePoolSize(exportExcelProperties.getCorePoolSize());
         threadPoolTaskExecutor.setQueueCapacity(exportExcelProperties.getQueueCapacity());

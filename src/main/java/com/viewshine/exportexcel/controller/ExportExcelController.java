@@ -9,8 +9,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-
 /**
  * @author changWei[changwei@viewshine.cn]
  */
@@ -23,10 +21,10 @@ public class ExportExcelController {
     private ExportExcelService exportExcelService;
 
     @GetMapping("/exportExcel")
-    public JSONObject exportExcel(String sql, String dataBase, List<List<String>> columnNameLists) {
+    public JSONObject exportExcel(String sql, String dataBase) {
         logger.info("要执行的SQL语句是：{}，连接的数据库是：{}，Excel各个表头是：{}", sql, dataBase,
-                JSON.toJSONString(columnNameLists));
-        exportExcelService.exportExcel(sql, dataBase, columnNameLists);
+                JSON.toJSONString(null));
+        exportExcelService.exportExcel(sql, dataBase, null);
         JSONObject result = new JSONObject();
         result.put("resultCode", "200");
         result.put("resultMessage", "success");

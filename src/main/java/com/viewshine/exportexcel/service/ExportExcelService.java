@@ -1,16 +1,14 @@
 package com.viewshine.exportexcel.service;
 
-import java.util.List;
+import com.viewshine.exportexcel.entity.RequestExcelDTO;
 
 /**
  * @author changWei[changwei@viewshine.cn]
  */
 public interface ExportExcelService {
     /**
-     * 在指定的dataBase数据源下执行执行的SQL语句，输出的列名为column
-     * @param sql 执行的SQL语句
-     * @param dataBase 指定那个数据源
-     * @param columnNameLists 导出的列名
+     * 在指定的dataBase数据源下执行执行的SQL语句，并保存到本地磁盘文件中
+     * @param requestExcelDTO 表示执行的SQL语句，选择的数据源，以及各个导出列的属性内容
      */
-    void exportExcel(String sql, String dataBase, List<List<String>> columnNameLists);
+    void exportExcelToDisk(RequestExcelDTO requestExcelDTO);
 }

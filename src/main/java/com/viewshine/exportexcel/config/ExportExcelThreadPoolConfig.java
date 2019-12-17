@@ -10,7 +10,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
  * @author changWei[changwei@viewshine.cn]
  */
 @Configuration
-public class ExportExcelConfig {
+public class ExportExcelThreadPoolConfig {
 
     /**
      * 使用多线程进行Excel的下载本地，或者直接通过浏览器下载

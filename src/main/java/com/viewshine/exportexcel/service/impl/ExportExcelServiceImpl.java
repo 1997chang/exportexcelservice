@@ -1,14 +1,12 @@
 package com.viewshine.exportexcel.service.impl;
 
-import com.alibaba.fastjson.JSON;
+import com.viewshine.exportexcel.entity.RequestExcelDTO;
 import com.viewshine.exportexcel.properties.DataSourceNameHolder;
 import com.viewshine.exportexcel.service.ExportExcelService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 /**
  * @author changWei[changwei@viewshine.cn]
@@ -23,11 +21,12 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     private TaskExecutor exportExcelTaskExecutor;
 
     @Override
-    public void exportExcel(String sql, String dataBase, List<List<String>> columnNameLists) {
+    public void exportExcelToDisk(RequestExcelDTO requestExcelDTO) {
         String activeDataSource = DataSourceNameHolder.getActiveDataSource();
         exportExcelTaskExecutor.execute(() -> {
             DataSourceNameHolder.setActiveDataSource(activeDataSource);
-            System.out.println(JSON.toJSONString(jdbcTemplate.queryForList(sql)));
+            //TODO 1执行SQL语句
+            //TODO 将执行结果导出到Excel表格中
         });
     }
 }

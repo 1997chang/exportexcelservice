@@ -2,8 +2,10 @@ package com.viewshine.exportexcel.entity;
 
 import lombok.Data;
 
+import javax.validation.constraints.Min;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
 import java.util.List;
 
 /**
@@ -27,7 +29,20 @@ public class RequestExcelDTO {
     /**
      * 表示各个Excel导出列的属性，一个对应一个ExcelColumnDTO。
      */
+    @NotNull(message = "Excel表格属性不能为空")
     @NotEmpty(message = "Excel表格属性不能为空")
     private List<ExcelColumnDTO> excelColumnDTOList;
+
+    /**
+     * 表示保存的天数
+     */
+    @Min(message = "保存的天数不能少于1天", value = 1)
+    private Integer saveDay;
+
+    /**
+     * 表示导出到那个目录下
+     */
+    @NotBlank(message = "导出的目录不能为空")
+    private String exportDirectory;
 
 }

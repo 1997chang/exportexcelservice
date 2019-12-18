@@ -8,9 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 
 /**
@@ -28,9 +28,9 @@ public class ExportExcelController {
      * 用于
      * @return
      */
-    @GetMapping("/exportExcelToDisk")
-    public ResultVO<Void> exportExcelToDisk(@Valid RequestExcelDTO requestExcelDTO,
-                                            BindingResult bindingResult) {
+    @PostMapping("/exportExcelToDisk")
+    public ResultVO<Void> exportExcelToDisk(@Valid @RequestBody RequestExcelDTO requestExcelDTO,
+                                            BindingResult bindingResult, HttpServletRequest request) {
         if (bindingResult.hasErrors()) {
             return ResultVO.errorResult(bindingResult.getFieldError().getDefaultMessage());
         }

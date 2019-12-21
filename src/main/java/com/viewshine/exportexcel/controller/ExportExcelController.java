@@ -30,7 +30,7 @@ public class ExportExcelController {
      */
     @PostMapping("/exportExcelToDisk")
     public ResultVO<Void> exportExcelToDisk(@Valid @RequestBody RequestExcelDTO requestExcelDTO,
-                                            BindingResult bindingResult, HttpServletRequest request) {
+                                            BindingResult bindingResult) {
         if (bindingResult.hasErrors()) {
             return ResultVO.errorResult(bindingResult.getFieldError().getDefaultMessage());
         }

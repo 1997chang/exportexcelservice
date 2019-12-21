@@ -17,6 +17,11 @@ public class ExcelColumnDTO {
     private String columnName;
 
     /**
+     * 表示Java中对应类型的全限定名称
+     */
+    private String classType;
+
+    /**
      * 表示输出到Excel表格中的头数据
      */
     private List<String> excelHeadName;

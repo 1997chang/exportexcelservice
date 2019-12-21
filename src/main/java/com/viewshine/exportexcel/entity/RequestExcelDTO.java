@@ -22,6 +22,11 @@ public class RequestExcelDTO {
     private String sql;
 
     /**
+     * 表示SQL语句中的参数
+     */
+    private Object[] sqlParams;
+
+    /**
      * 表示选择的数据源名称
      */
     private String datasource;
@@ -44,5 +49,11 @@ public class RequestExcelDTO {
      */
     @NotBlank(message = "导出的目录不能为空")
     private String exportDirectory;
+
+    /**
+     * 表示文件的前缀
+     */
+    private String filePrefix;
+
 
 }

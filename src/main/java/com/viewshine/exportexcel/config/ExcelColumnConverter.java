@@ -10,6 +10,7 @@ import java.util.List;
  * 表示转化器，用于将一个JSON字符创转化为List对象内容
  * @author ChangWei[changwei@viewshine.cn]
  */
+@Deprecated
 public class ExcelColumnConverter implements Converter<String, List<ExcelColumnDTO>> {
 
     @Override

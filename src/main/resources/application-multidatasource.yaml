@@ -4,8 +4,8 @@ spring:
       multi:
         one:
           username: root
-          password: Mysql@106966
-          url: jdbc:mysql://localhost:3306/test
+          password: root
+          url: jdbc:mysql://localhost:3306/world
           filters: wall,stat
           stat-view-servlet:
             enabled: true

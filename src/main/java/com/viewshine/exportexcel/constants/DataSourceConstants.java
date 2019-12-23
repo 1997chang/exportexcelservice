@@ -15,4 +15,9 @@ public class DataSourceConstants {
      */
     public static final String HTTP_DATASOURCE_NAME = "datasource";
 
+    /**
+     * 用于配置文件
+     */
+    public static final String DOWNLOAD_FILE_URL = "/download/**";
+
 }

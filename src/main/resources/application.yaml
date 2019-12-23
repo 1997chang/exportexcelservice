@@ -7,6 +7,7 @@ export:
         queueCapacity: 1000
         keepAlive: 300
         prefix: exportExcel
+    docFilePath: /home/docFile
 spring:
   profiles:
     active: multidatasource

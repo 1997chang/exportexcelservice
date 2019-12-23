@@ -4,21 +4,28 @@ import cn.viewshine.cloudthree.excel.ExcelFactory;
 import com.alibaba.fastjson.JSON;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
+import com.viewshine.exportexcel.exceptions.CommonRuntimeException;
 import com.viewshine.exportexcel.properties.DataSourceNameHolder;
 import com.viewshine.exportexcel.service.ExportExcelService;
 import com.viewshine.exportexcel.utils.CommonUtils;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+
+import java.io.File;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.joining;
 
 /**
  * @author changWei[changwei@viewshine.cn]
@@ -34,65 +41,107 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     @Autowired
     private TaskExecutor exportExcelTaskExecutor;
 
+    @Value("${export.excel.docFilePath}")
+    private String docFilePath;
+
     @Override
-    public void exportExcelToDisk(RequestExcelDTO requestExcelDTO) {
+    public void exportExcelToDisk(RequestExcelDTO requestExcelDTO, String exportFileName) {
+        if (StringUtils.isNotBlank(requestExcelDTO.getDatasource())) {
+            DataSourceNameHolder.setActiveDataSource(requestExcelDTO.getDatasource());
+        }
+        String finalSelectDataSourceName = DataSourceNameHolder.getActiveDataSource();
         exportExcelTaskExecutor.execute(() -> {
             try {
-
-                logger.info("准备导出Excel");
+                logger.info("最终选择的数据库为：{}", finalSelectDataSourceName);
+                DataSourceNameHolder.setActiveDataSource(finalSelectDataSourceName);
+                logger.info("准备将数据导出到Excel中");
                 List<List<String>> excelContentData = getExcelContentData(requestExcelDTO);
                 logger.info("查询出来的数据内容为：[{}]", JSON.toJSONString(excelContentData));
                 List<List<String>> excelHeadName = getExcelHeadName(requestExcelDTO.getExcelColumnDTOList());
-                logger.info("Excel表格的头数据内容：[{}]", JSON.toJSONString(excelContentData));
-                String fileName = CommonUtils.generateExcelFileName(requestExcelDTO.getExportDirectory(),
-                        requestExcelDTO.getFilePrefix());
-                logger.info("最终的文件路径地址；[{}]", fileName);
+                logger.info("Excel表格的头数据内容：[{}]", JSON.toJSONString(excelHeadName));
+                String filePath = getFileSavePath(exportFileName);
                 ExcelFactory.writeExcel(Collections.singletonMap("sheet1", excelContentData),
-                        Collections.singletonMap("sheet1", excelHeadName), fileName);
+                        Collections.singletonMap("sheet1", excelHeadName), filePath);
+                logger.info("最终的文件路径地址；[{}]", filePath);
             } catch (Exception e){
-                e.printStackTrace();
+                logger.error("导出Excel出现错误。" +e.getMessage(), e);
+                throw new CommonRuntimeException();
             }
         });
     }
 
-    /**
-     * 用于
-     * @return
-     */
-    private List<List<String>> getExcelContentData(RequestExcelDTO requestExcelDTO) {
-        try{
-            logger.info("准备获取数据内容，执行的SQL语句为：[{}]", requestExcelDTO.getSql());
-            DataSourceNameHolder.setActiveDataSource(requestExcelDTO.getDatasource());
-            List<List<String>> result = jdbcTemplate.query(requestExcelDTO.getSql(), (rs, rowCount) -> {
-                List<String> itemData = new ArrayList<>();
-                requestExcelDTO.getExcelColumnDTOList().forEach(columnDTO -> {
-                    //计算公式
-                    try {
-                        if (StringUtils.isNotBlank(columnDTO.getFormula())) {
-
-                        } else {
-                            itemData.add(rs.getString(columnDTO.getColumnName()));
-                        }
-                    } catch (Exception e) {
-                        logger.error("获取SQL数据内容错误");
-                    }
-                });
-                return itemData;
-            }, requestExcelDTO.getSqlParams());
-            logger.info("查询出来的数据内容为：{}", JSON.toJSONString(result));
-            return result;
-        } catch (Exception e){
-            logger.error(e.getMessage(), e);
-            e.printStackTrace();
+    private String getFileSavePath(String exportFileName) {
+        StringBuilder result = new StringBuilder(128);
+        result.append(CommonUtils.formatFileOnSystem(docFilePath));
+        char separatorChar = File.separatorChar;
+        if (! Objects.equals(separatorChar, result.charAt(result.length() - 1))) {
+            result.append(separatorChar);
         }
-        return null;
+        return result.append(exportFileName).toString();
     }
 
+    /**
+     * 用于获取SQL语句中执行的数据内容数据。
+     * 注意：最终选择的列，以requestExcelDTO属性中的excelColumnDTOList中指定的列的名称为准
+     * @param requestExcelDTO 导出Excel的SQL语句，导出的列名等
+     * @return SQL执行的数据内容
+     */
+    @NonNull
+    private List<List<String>> getExcelContentData(final RequestExcelDTO requestExcelDTO) {
+        logger.info("准备获取数据内容，执行的SQL语句为：[{}]", requestExcelDTO.getSql());
+        logger.info("最终导出的列名有：{}", requestExcelDTO.getExcelColumnDTOList().stream().
+                map(ExcelColumnDTO::getColumnName).filter(StringUtils::isNotBlank).collect(joining(",")));
+        long columnCount = requestExcelDTO.getExcelColumnDTOList().stream().map(ExcelColumnDTO::getColumnName).
+                filter(StringUtils::isNotBlank).count();
+        final Map<String, String> dataMap = new HashMap<>((int) Math.ceil(columnCount * 4 / 3));
+
+        List<List<String>> result = jdbcTemplate.query(requestExcelDTO.getSql(), (rs, rowCount) -> {
+            List<String> itemData = new ArrayList<>();
+            requestExcelDTO.getExcelColumnDTOList().stream().filter(columnDTO ->
+                    StringUtils.isNotBlank(columnDTO.getColumnName())).forEach(columnDTO -> {
+                String dataValue;
+                try {
+                    if (StringUtils.isNotBlank(columnDTO.getFormula())) {
+                        dataValue = CommonUtils.computeFormula(columnDTO.getFormula(), dataMap).toPlainString();
+                    } else if (StringUtils.isNotBlank(columnDTO.getFormat())) {
+                        LocalDateTime localDateTime = rs.getTimestamp(columnDTO.getColumnName(),
+                                Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))).toLocalDateTime();
+                        dataValue = localDateTime.format(DateTimeFormatter.ofPattern(columnDTO.getFormat()));
+                    } else {
+                        dataValue = rs.getString(columnDTO.getColumnName());
+                    }
+                    itemData.add(dataValue);
+                } catch (Exception e) {
+                    logger.error("获取SQL数据内容错误" + e.getMessage(), e);
+                    //TODO 获取数据库中的数据内容错误，抛出相应错误
+                    throw new CommonRuntimeException();
+                }
+                dataMap.put(columnDTO.getColumnName(), dataValue);
+            });
+            dataMap.clear();
+            return itemData;
+        }, requestExcelDTO.getSqlParams());
+        return result;
+    }
+
+    /**
+     * 获取导出Excel表格的表头数据内容
+     * 获取所有ColumnName不为空的，如果HeadName为空，则使用ColumnName作为表头
+     * @param excelColumnDTOList 导出各个列的数据内容
+     * @return 返回表头数据内容
+     */
     private static List<List<String>> getExcelHeadName(List<ExcelColumnDTO> excelColumnDTOList) {
         if (excelColumnDTOList == null) {
             return (List<List<String>>) Collections.EMPTY_LIST;
         }
-        return excelColumnDTOList.stream().map(ExcelColumnDTO::getExcelHeadName).collect(Collectors.toList());
+        return excelColumnDTOList.stream().filter(excelColumnDTO ->
+                StringUtils.isNotBlank(excelColumnDTO.getColumnName())).map(excelColumnDTO -> {
+                    if(CollectionUtils.isEmpty(excelColumnDTO.getExcelHeadName())) {
+                        return Collections.singletonList(excelColumnDTO.getColumnName());
+                    } else {
+                        return excelColumnDTO.getExcelHeadName();
+                    }
+                }).collect(Collectors.toList());
     }
 
 }

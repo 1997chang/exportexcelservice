@@ -1,10 +1,17 @@
 package com.viewshine.exportexcel.config;
 
+import com.viewshine.exportexcel.utils.CommonUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.io.File;
+import java.util.Objects;
+
+import static com.viewshine.exportexcel.constants.DataSourceConstants.DOWNLOAD_FILE_URL;
 
 /**
  * @author ChangWei[changwei@viewshine.cn]
@@ -14,6 +21,12 @@ public class WebConfiguration implements WebMvcConfigurer {
 
     @Autowired
     private DataSourceNameInterceptor dataSourceNameInterceptor;
+
+    /**
+     * 表示文件保存位置
+     */
+    @Value("${export.excel.docFilePath}")
+    private String docFilePath;
 
 /*    @Override
     public void addFormatters(FormatterRegistry registry) {
@@ -26,6 +39,21 @@ public class WebConfiguration implements WebMvcConfigurer {
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(dataSourceNameInterceptor).addPathPatterns("/**");
+        registry.addInterceptor(dataSourceNameInterceptor).addPathPatterns("/**").excludePathPatterns(DOWNLOAD_FILE_URL);
+    }
+
+    /**
+     * 用于设置虚拟目录，从而下载文件
+     * @param registry
+     */
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        StringBuilder downloadFilePath = new StringBuilder("file:");
+        downloadFilePath.append(CommonUtils.formatFileOnSystem(docFilePath));
+        char separatorChar = File.separatorChar;
+        if (! Objects.equals(separatorChar, downloadFilePath.charAt(downloadFilePath.length() - 1))) {
+            downloadFilePath.append(separatorChar);
+        }
+        registry.addResourceHandler(DOWNLOAD_FILE_URL).addResourceLocations(downloadFilePath.toString());
     }
 }

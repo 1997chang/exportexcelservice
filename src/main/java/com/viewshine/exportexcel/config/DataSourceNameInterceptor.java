@@ -15,7 +15,6 @@ import javax.servlet.http.HttpSession;
 import java.util.Objects;
 import java.util.Optional;
 
-import static com.viewshine.exportexcel.constants.DataSourceConstants.DEFAULT_DATASOURCE_NAME;
 import static com.viewshine.exportexcel.constants.DataSourceConstants.HTTP_DATASOURCE_NAME;
 
 /**
@@ -39,31 +38,30 @@ public class DataSourceNameInterceptor extends HandlerInterceptorAdapter {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
-        logger.info("请求地址为：【{}】准备导出Excel数据内容", request.getRequestURL());
+        logger.info("请求地址为：【{}】，准备导出或下载Excel数据内容", request.getRequestURL());
         String selectDataSourceName = request.getHeader(HTTP_DATASOURCE_NAME);
-        logger.info("首先从请求Head中获取要选择的数据源信息，传递的参数为：[{}]", selectDataSourceName);
+        logger.info("首先从请求Head中获取要选择的数据源信息，参数名：{}，传递的参数为：[{}]",
+                HTTP_DATASOURCE_NAME, selectDataSourceName);
         if (StringUtils.isBlank(selectDataSourceName)) {
             selectDataSourceName = request.getParameter(HTTP_DATASOURCE_NAME);
-            logger.info("请求头中没有指定选择的数据源，然后从请求参数中获取的要选择的数据源，传递的参数为：[{}]",
-                    selectDataSourceName);
+            logger.info("请求头中没有指定选择的数据源，然后从请求参数中获取的要选择的数据源，参数名：{}，传递的参数为" +
+                            "：[{}]", HTTP_DATASOURCE_NAME, selectDataSourceName);
         }
         if (StringUtils.isBlank(selectDataSourceName)) {
             HttpSession session = request.getSession(false);
             Optional<HttpSession> dataSourceOptional = Optional.ofNullable(session);
             selectDataSourceName = dataSourceOptional.map(httpSession -> httpSession.getAttribute(HTTP_DATASOURCE_NAME))
                     .map(Objects::toString).orElse("");
-            logger.info("请求参数中没有指定选择的数据源，然后准备从请求会话中获取选择的数据源，参数的参数值为：[{}]",
-                    selectDataSourceName);
+            logger.info("请求参数中没有指定选择的数据源，然后准备从请求会话中获取选择的数据源，参数名：{}，" +
+                            "参数的参数值为：[{}]", HTTP_DATASOURCE_NAME, selectDataSourceName);
         }
-        if (StringUtils.isBlank(selectDataSourceName)) {
-            logger.info("没有在任何地方指定要选择的数据源，使用默认的数据源，默认的数据源为：[{}]", DEFAULT_DATASOURCE_NAME);
-            return true;
+        if (StringUtils.isNotBlank(selectDataSourceName)) {
+            //将选择的数据源设置到Session中
+            Optional<HttpSession> sessionOptional = Optional.ofNullable(request.getSession(false));
+            String finalDataSource = selectDataSourceName;
+            sessionOptional.ifPresent(httpSession -> httpSession.setAttribute(HTTP_DATASOURCE_NAME, finalDataSource));
+            DataSourceNameHolder.setActiveDataSource(finalDataSource);
         }
-        //将选择的数据源设置到Session中
-        Optional<HttpSession> sessionOptional = Optional.ofNullable(request.getSession(false));
-        String finalDataSource = selectDataSourceName;
-        sessionOptional.ifPresent(httpSession -> httpSession.setAttribute(HTTP_DATASOURCE_NAME, finalDataSource));
-        DataSourceNameHolder.setActiveDataSource(finalDataSource);
         return true;
     }
 

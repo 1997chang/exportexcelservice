@@ -4,6 +4,7 @@ import com.alibaba.fastjson.JSON;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
 import com.viewshine.exportexcel.entity.ResultVO;
 import com.viewshine.exportexcel.service.ExportExcelService;
+import com.viewshine.exportexcel.utils.CommonUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +30,16 @@ public class ExportExcelController {
      * @return
      */
     @PostMapping("/exportExcelToDisk")
-    public ResultVO<Void> exportExcelToDisk(@Valid @RequestBody RequestExcelDTO requestExcelDTO,
-                                            BindingResult bindingResult) {
+    public ResultVO<String> exportExcelToDisk(@Valid @RequestBody RequestExcelDTO requestExcelDTO,
+                                            BindingResult bindingResult, HttpServletRequest request) {
         if (bindingResult.hasErrors()) {
             return ResultVO.errorResult(bindingResult.getFieldError().getDefaultMessage());
         }
         logger.info("准备写入到本地磁盘文件中，传递的参数内容为：[{}]", JSON.toJSONString(requestExcelDTO));
-        exportExcelService.exportExcelToDisk(requestExcelDTO);
-        return ResultVO.successResult();
+        String exportFileName = CommonUtils.generateExcelFileName(requestExcelDTO.getExportDirectory(),
+                requestExcelDTO.getFilePrefix());
+        exportExcelService.exportExcelToDisk(requestExcelDTO, exportFileName);
+        return ResultVO.successResult(exportFileName);
     }
 
 }

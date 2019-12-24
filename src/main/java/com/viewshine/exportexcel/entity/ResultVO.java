@@ -21,8 +21,8 @@ public class ResultVO<T> {
         this.message = message;
     }
 
-    public static ResultVO errorResult(String message) {
-        ResultVO resultVO = new ResultVO();
+    public static <T> ResultVO<T> errorResult(String message) {
+        ResultVO<T> resultVO = new ResultVO<>();
         resultVO.code = 500;
         resultVO.message = message;
         return resultVO;

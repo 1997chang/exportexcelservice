@@ -16,8 +16,13 @@ public class DataSourceConstants {
     public static final String HTTP_DATASOURCE_NAME = "datasource";
 
     /**
-     * 用于配置文件
+     * 表示下载文件的路径地址
      */
-    public static final String DOWNLOAD_FILE_URL = "/download/**";
+    public static final String DOWNLOAD_FILE_URL = "/download";
+
+    /**
+     * 表示下载文件的拦截器地址，这个最好不要修改
+     */
+    public static final String DOWNLOAD_FILE_URL_HANDLE = DOWNLOAD_FILE_URL + "/**";
 
 }

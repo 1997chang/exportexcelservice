@@ -1,0 +1,8 @@
+{
+  "properties": [
+    {
+      "name": "export.excel.docFilePath",
+      "type": "java.lang.String",
+      "description": "表示Excel文件下载的路径."
+    }
+  ] }

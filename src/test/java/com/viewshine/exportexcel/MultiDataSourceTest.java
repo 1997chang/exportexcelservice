@@ -3,11 +3,11 @@ package com.viewshine.exportexcel;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
 import com.viewshine.exportexcel.service.ExportExcelService;
-import com.viewshine.exportexcel.utils.CommonUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import java.util.ArrayList;
@@ -25,6 +25,9 @@ public class MultiDataSourceTest {
     @Autowired
     private ExportExcelService exportExcelService;
 
+    @Autowired
+    private MockHttpServletRequest mockHttpServletRequest;
+
     public void createExcelColumn(RequestExcelDTO requestExcelDTO) {
         ExcelColumnDTO excelColumnDTO = new ExcelColumnDTO();
         excelColumnDTO.setColumnName("CountryCode");
@@ -41,7 +44,8 @@ public class MultiDataSourceTest {
         ExcelColumnDTO excelColumnDTO3 = new ExcelColumnDTO();
         excelColumnDTO3.setColumnName("Percentage");
         excelColumnDTO3.setExcelHeadName(Collections.singletonList("频率"));
-        List<ExcelColumnDTO> excelColumnDTOList = new ArrayList<>(Arrays.asList(excelColumnDTO, excelColumnDTO1, excelColumnDTO2, excelColumnDTO3));
+        List<ExcelColumnDTO> excelColumnDTOList = new ArrayList<>(Arrays.asList(excelColumnDTO, excelColumnDTO1,
+                excelColumnDTO2, excelColumnDTO3));
         requestExcelDTO.setExcelColumnDTOList(excelColumnDTOList);
     }
 
@@ -54,8 +58,7 @@ public class MultiDataSourceTest {
         requestExcelDTO.setFilePrefix("test");
         requestExcelDTO.setExportDirectory("temptest");
         createExcelColumn(requestExcelDTO);
-        String fileName = CommonUtils.generateExcelFileName(requestExcelDTO.getExportDirectory(), requestExcelDTO.getFilePrefix());
-        exportExcelService.exportExcelToDisk(requestExcelDTO, fileName);
+        exportExcelService.exportExcelToDisk(requestExcelDTO, mockHttpServletRequest);
         try {
             Thread.sleep(20000);
         } catch (InterruptedException e) {
@@ -109,9 +112,7 @@ public class MultiDataSourceTest {
         requestExcelDTO.setFilePrefix("user");
         requestExcelDTO.setExportDirectory("users");
         createUserExcelColumn(requestExcelDTO);
-        String fileName = CommonUtils.generateExcelFileName(requestExcelDTO.getExportDirectory(), requestExcelDTO.getFilePrefix());
-        System.out.println(fileName);
-        exportExcelService.exportExcelToDisk(requestExcelDTO, fileName);
+        exportExcelService.exportExcelToDisk(requestExcelDTO, mockHttpServletRequest);
         try {
             Thread.sleep(20000);
         } catch (InterruptedException e) {

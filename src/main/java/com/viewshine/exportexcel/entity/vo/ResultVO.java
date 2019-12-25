@@ -1,4 +1,4 @@
-package com.viewshine.exportexcel.entity;
+package com.viewshine.exportexcel.entity.vo;
 
 import lombok.Data;
 

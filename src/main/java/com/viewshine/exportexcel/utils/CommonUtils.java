@@ -7,15 +7,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.lang.NonNull;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+
+import static com.viewshine.exportexcel.constants.DataSourceConstants.DOWNLOAD_FILE_URL;
 
 /**
  * @author changWei[changwei@viewshine.cn]
@@ -37,10 +37,11 @@ public final class CommonUtils {
     private CommonUtils() {}
 
     /**
-     * 根据一个前缀生成Excel文件的路径文件名
+     * 根据一个前缀生成Excel文件的路径文件名，表示一个相对路径的文件名称
+     * 格式：${directory}/${prefix}_时间6位随机数.xlsx
      * @param directory 文件所在的目录
      * @param prefix 文件名前缀
-     * @return
+     * @return 文件名称
      */
     public static String generateExcelFileName(String directory, String prefix) {
         StringBuilder result = new StringBuilder(128);
@@ -57,7 +58,7 @@ public final class CommonUtils {
 
     /**
      * 根据当前系统，将路径地址转化为当前系统正确地址
-     * @return
+     * @return 对应系统的路径地址
      */
     public static String formatFileOnSystem(String filePath) {
         char separatorChar = File.separatorChar;
@@ -83,8 +84,9 @@ public final class CommonUtils {
         Stack<BigDecimal> numberStack = new Stack<>();
         int startIndex = 0;
         int currentIndex = 0;
-        int forulaLength = formula.length();
-        while (currentIndex < forulaLength) {
+        int formulaLength = formula.length();
+        while (currentIndex < formulaLength) {
+            //TODO 没有完成括号的计算
             if (operationMap.containsKey(formula.charAt(currentIndex))) {
                 OperationEnum currentOperation = operationMap.get(formula.charAt(currentIndex));
                 numberStack.push(new BigDecimal(values.get(StringUtils.deleteWhitespace(formula.substring(startIndex,
@@ -98,11 +100,31 @@ public final class CommonUtils {
             currentIndex++;
         }
         numberStack.push(new BigDecimal(values.get(StringUtils.deleteWhitespace(formula.substring(startIndex,
-                forulaLength)))));
+                formulaLength)))));
         while (!operation.isEmpty()) {
             numberStack.push(operation.pop().compute(numberStack.pop(), numberStack.pop()));
         }
         return numberStack.pop();
+    }
+
+    /**
+     * 用于返回一个唯一标识
+     * @return UUIDString
+     */
+    public static String generateUUID() {
+        return UUID.randomUUID().toString().replace("-","");
+    }
+
+    /**
+     * 用于获取最终返回的URL地址
+     * @param request 当前请求
+     * @param exportExcelFileName 导出的文件名称
+     * @return 导出的URL地址
+     */
+    public static String getExportUrl(HttpServletRequest request, String exportExcelFileName) {
+        return new StringBuilder(120).append(request.getScheme()).append("://").
+                append(request.getServerName()).append(":").append(request.getServerPort())
+                .append(request.getContextPath()).append(DOWNLOAD_FILE_URL).append(exportExcelFileName).toString();
     }
 
 }

@@ -4,6 +4,9 @@ import cn.viewshine.cloudthree.excel.ExcelFactory;
 import com.alibaba.fastjson.JSON;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
+import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
+import com.viewshine.exportexcel.entity.vo.QueryExcelVo;
+import com.viewshine.exportexcel.entity.vo.ResultVO;
 import com.viewshine.exportexcel.exceptions.CommonRuntimeException;
 import com.viewshine.exportexcel.properties.DataSourceNameHolder;
 import com.viewshine.exportexcel.service.ExportExcelService;
@@ -19,6 +22,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
+import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -45,7 +49,10 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     private String docFilePath;
 
     @Override
-    public void exportExcelToDisk(RequestExcelDTO requestExcelDTO, String exportFileName) {
+    public ResultVO<ExportExcelVo> exportExcelToDisk(RequestExcelDTO requestExcelDTO, HttpServletRequest request) {
+        String relativeFilePath = CommonUtils.generateExcelFileName(requestExcelDTO.getExportDirectory(),
+                requestExcelDTO.getFilePrefix());
+
         if (StringUtils.isNotBlank(requestExcelDTO.getDatasource())) {
             DataSourceNameHolder.setActiveDataSource(requestExcelDTO.getDatasource());
         }
@@ -59,7 +66,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 logger.info("查询出来的数据内容为：[{}]", JSON.toJSONString(excelContentData));
                 List<List<String>> excelHeadName = getExcelHeadName(requestExcelDTO.getExcelColumnDTOList());
                 logger.info("Excel表格的头数据内容：[{}]", JSON.toJSONString(excelHeadName));
-                String filePath = getFileSavePath(exportFileName);
+                String filePath = getFileSavePath(relativeFilePath);
                 ExcelFactory.writeExcel(Collections.singletonMap("sheet1", excelContentData),
                         Collections.singletonMap("sheet1", excelHeadName), filePath);
                 logger.info("最终的文件路径地址；[{}]", filePath);
@@ -68,8 +75,22 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 throw new CommonRuntimeException();
             }
         });
+        ExportExcelVo exportExcelVo = new ExportExcelVo();
+        exportExcelVo.setUUID(CommonUtils.generateUUID());
+        exportExcelVo.setUrl(CommonUtils.getExportUrl(request, relativeFilePath));
+        return ResultVO.successResult(exportExcelVo);
     }
 
+    @Override
+    public ResultVO<QueryExcelVo> queryByUUID(String uuid) {
+        return null;
+    }
+
+    /**
+     * 获取Excel最终保存的路径地址
+     * @param exportFileName 相对路径地址。
+     * @return 保存的绝对路径地址
+     */
     private String getFileSavePath(String exportFileName) {
         StringBuilder result = new StringBuilder(128);
         result.append(CommonUtils.formatFileOnSystem(docFilePath));

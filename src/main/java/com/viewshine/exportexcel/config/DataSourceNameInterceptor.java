@@ -38,7 +38,7 @@ public class DataSourceNameInterceptor extends HandlerInterceptorAdapter {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler)
             throws Exception {
-        logger.info("请求地址为：【{}】，准备导出或下载Excel数据内容", request.getRequestURL());
+        logger.info("请求地址为：【{}】，准备导出Excel数据内容", request.getRequestURL());
         String selectDataSourceName = request.getHeader(HTTP_DATASOURCE_NAME);
         logger.info("首先从请求Head中获取要选择的数据源信息，参数名：{}，传递的参数为：[{}]",
                 HTTP_DATASOURCE_NAME, selectDataSourceName);

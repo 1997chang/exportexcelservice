@@ -39,7 +39,7 @@ public class WebConfiguration implements WebMvcConfigurer {
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(dataSourceNameInterceptor).addPathPatterns("/**")
+        registry.addInterceptor(dataSourceNameInterceptor).addPathPatterns("/export/**")
                 .excludePathPatterns(DOWNLOAD_FILE_URL_HANDLE);
     }
 

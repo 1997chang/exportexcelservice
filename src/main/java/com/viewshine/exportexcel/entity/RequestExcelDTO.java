@@ -29,6 +29,7 @@ public class RequestExcelDTO {
     /**
      * 表示选择的数据源名称
      */
+    @NotBlank(message = "没有指定选择的数据库名称")
     private String datasource;
 
     /**

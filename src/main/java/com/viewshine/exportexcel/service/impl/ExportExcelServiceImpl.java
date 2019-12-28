@@ -29,6 +29,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.DOWNLOADING;
 import static java.util.stream.Collectors.joining;
 
 /**
@@ -70,19 +71,25 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 ExcelFactory.writeExcel(Collections.singletonMap("sheet1", excelContentData),
                         Collections.singletonMap("sheet1", excelHeadName), filePath);
                 logger.info("最终的文件路径地址；[{}]", filePath);
+                //TODO 下载完成，通知下载方
+
             } catch (Exception e){
                 logger.error("导出Excel出现错误。" +e.getMessage(), e);
                 throw new CommonRuntimeException();
             }
         });
         ExportExcelVo exportExcelVo = new ExportExcelVo();
-        exportExcelVo.setUUID(CommonUtils.generateUUID());
+        exportExcelVo.setExcelId(CommonUtils.generateUUID());
+        exportExcelVo.setStatus(DOWNLOADING);
         exportExcelVo.setUrl(CommonUtils.getExportUrl(request, relativeFilePath));
+        //TODO 保存到Redis中
+        //TODO 使用延迟时间，加入到延期任务，从而完成超时执行任务
         return ResultVO.successResult(exportExcelVo);
     }
 
     @Override
-    public ResultVO<QueryExcelVo> queryByUUID(String uuid) {
+    public ResultVO<QueryExcelVo> queryByExcelId(String uuid) {
+        //TODO 从Redis中返回下载完成情况
         return null;
     }
 

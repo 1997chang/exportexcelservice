@@ -11,3 +11,22 @@ export:
 spring:
   profiles:
     active: multidatasource
+  redis:
+    database: 15
+    host: localhost
+    port: 6379
+    timeout: 60s
+    jedis:
+      pool:
+        max-active: 8
+        min-idle: 1
+        max-idle: 8
+        max-wait: 60s
+#  task:
+#    scheduling:
+#      thread-name-prefix: deleteExcel-
+#      pool:
+#        size: 3
+#      shutdown:
+#        await-termination: true
+#        await-termination-period: 30m

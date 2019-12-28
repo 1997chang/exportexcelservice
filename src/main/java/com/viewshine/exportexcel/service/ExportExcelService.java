@@ -21,8 +21,8 @@ public interface ExportExcelService {
 
     /**
      * 表示根据UUID获取对应文件的下载状态
-     * @param uuid UUID
+     * @param uuid excelId
      * @return 下载状态
      */
-    ResultVO<QueryExcelVo> queryByUUID(String uuid);
+    ResultVO<QueryExcelVo> queryByExcelId(String uuid);
 }

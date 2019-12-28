@@ -39,13 +39,13 @@ public class ExportExcelController {
 
     /**
      * 用于查询某一个Excel文件是否下载完成
-     * @param UUID Excel文件对应的唯一表示
+     * @param ExcelId Excel文件对应的唯一表示
      * @return 下载状态
      */
-    @GetMapping("/queryByUUID/{UUID}")
-    public ResultVO<QueryExcelVo> queryByUUID(@PathVariable("UUID") String UUID) {
-        logger.info("准备根据UUID查询下载状态，UUID：{}", UUID);
-        return exportExcelService.queryByUUID(UUID);
+    @GetMapping("/queryByExcelId/{ExcelId}")
+    public ResultVO<QueryExcelVo> queryByUUID(@PathVariable("ExcelId") String ExcelId) {
+        logger.info("准备根据UUID查询下载状态，excelId：{}", ExcelId);
+        return exportExcelService.queryByExcelId(ExcelId);
     }
 
 }

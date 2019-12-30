@@ -125,7 +125,7 @@ public final class CommonUtils {
     public static String getExportUrl(HttpServletRequest request, String exportExcelFileName) {
         return new StringBuilder(120).append(request.getScheme()).append("://").
                 append(request.getServerName()).append(":").append(request.getServerPort())
-                .append(request.getContextPath()).append(DOWNLOAD_FILE_URL).append(exportExcelFileName).toString();
+                .append(request.getContextPath()).append(DOWNLOAD_FILE_URL).append("/").append(exportExcelFileName).toString();
     }
 
     /**
@@ -134,7 +134,7 @@ public final class CommonUtils {
      * @return
      */
     public static String getCallBackUrl(String callback) {
-        if (!callback.startsWith("http://") || !callback.startsWith("https://")) {
+        if (!(callback.startsWith("http://") || callback.startsWith("https://"))) {
             logger.error("callBack地址错误，没有以http://或者https://开头");
             return null;
         }

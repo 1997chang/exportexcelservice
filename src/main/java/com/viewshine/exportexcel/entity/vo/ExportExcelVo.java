@@ -8,7 +8,7 @@ import lombok.Data;
  * @author ChangWei[changwei@viewshine.cn]
  */
 @Data
-public class ExportExcelVo {
+public class ExportExcelVo implements Cloneable {
 
     /**
      * 表示一个唯一标识
@@ -24,4 +24,9 @@ public class ExportExcelVo {
      * 表示下载Excel的文件路径地址
      */
     private String url;
+
+    @Override
+    public ExportExcelVo clone() throws CloneNotSupportedException {
+        return (ExportExcelVo) super.clone();
+    }
 }

@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 
@@ -39,10 +40,10 @@ public class ExportExcelThreadPoolConfig {
     }
 
     @Bean
-    public TaskExecutor deleteExcelScheduler() {
+    public TaskScheduler deleteExcelScheduler() {
         ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
         threadPoolTaskScheduler.setDaemon(true);
-        threadPoolTaskScheduler.setPoolSize(3);
+        threadPoolTaskScheduler.setPoolSize(2);
         threadPoolTaskScheduler.setErrorHandler(e -> {
             logger.error("执行计划任务失败。。。");
             logger.error(e.getMessage(), e);

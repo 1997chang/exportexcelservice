@@ -56,5 +56,9 @@ public class RequestExcelDTO {
      */
     private String filePrefix;
 
+    /**
+     * 表示回调地址
+     */
+    private String callbackUrl;
 
 }

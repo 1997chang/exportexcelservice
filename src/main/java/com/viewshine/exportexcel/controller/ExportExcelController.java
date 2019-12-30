@@ -3,7 +3,6 @@ package com.viewshine.exportexcel.controller;
 import com.alibaba.fastjson.JSON;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
 import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
-import com.viewshine.exportexcel.entity.vo.QueryExcelVo;
 import com.viewshine.exportexcel.entity.vo.ResultVO;
 import com.viewshine.exportexcel.service.ExportExcelService;
 import org.slf4j.Logger;
@@ -43,7 +42,7 @@ public class ExportExcelController {
      * @return 下载状态
      */
     @GetMapping("/queryByExcelId/{ExcelId}")
-    public ResultVO<QueryExcelVo> queryByUUID(@PathVariable("ExcelId") String ExcelId) {
+    public ResultVO<ExportExcelVo> queryByUUID(@PathVariable("ExcelId") String ExcelId) {
         logger.info("准备根据UUID查询下载状态，excelId：{}", ExcelId);
         return exportExcelService.queryByExcelId(ExcelId);
     }

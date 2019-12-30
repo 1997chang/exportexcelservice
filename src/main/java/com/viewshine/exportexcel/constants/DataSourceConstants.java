@@ -25,4 +25,14 @@ public class DataSourceConstants {
      */
     public static final String DOWNLOAD_FILE_URL_HANDLE = DOWNLOAD_FILE_URL + "/**";
 
+    /**
+     * 表示文件下载之后，保存到Redis的前缀
+     */
+    public static final String EXPORT_EXCEL_REDIS_PREFIX = "export.excel.download.";
+
+    /**
+     * 表示回调通知的地址
+     */
+    public static final String DOWNLOAD_CALLBACK_PATH = "/export/excel/start/callback";
+
 }

@@ -8,6 +8,7 @@ public enum ExcelDownloadStatus {
 
     DOWNLOADING("下载中"),
     FINISHED("下载完成"),
+    DELETE("删除"),
     CANCEL("下载取消");
 
     private final String status;

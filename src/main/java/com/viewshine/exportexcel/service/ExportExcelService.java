@@ -2,7 +2,6 @@ package com.viewshine.exportexcel.service;
 
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
 import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
-import com.viewshine.exportexcel.entity.vo.QueryExcelVo;
 import com.viewshine.exportexcel.entity.vo.ResultVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -24,5 +23,5 @@ public interface ExportExcelService {
      * @param uuid excelId
      * @return 下载状态
      */
-    ResultVO<QueryExcelVo> queryByExcelId(String uuid);
+    ResultVO<ExportExcelVo> queryByExcelId(String uuid);
 }

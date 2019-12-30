@@ -15,6 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.viewshine.exportexcel.constants.DataSourceConstants.DOWNLOAD_CALLBACK_PATH;
 import static com.viewshine.exportexcel.constants.DataSourceConstants.DOWNLOAD_FILE_URL;
 
 /**
@@ -125,6 +126,19 @@ public final class CommonUtils {
         return new StringBuilder(120).append(request.getScheme()).append("://").
                 append(request.getServerName()).append(":").append(request.getServerPort())
                 .append(request.getContextPath()).append(DOWNLOAD_FILE_URL).append(exportExcelFileName).toString();
+    }
+
+    /**
+     * 用于获取回调的通知地址
+     * @param callback
+     * @return
+     */
+    public static String getCallBackUrl(String callback) {
+        if (!callback.startsWith("http://") || !callback.startsWith("https://")) {
+            logger.error("callBack地址错误，没有以http://或者https://开头");
+            return null;
+        }
+        return new StringBuilder(120).append(callback).append(DOWNLOAD_CALLBACK_PATH).toString();
     }
 
 }

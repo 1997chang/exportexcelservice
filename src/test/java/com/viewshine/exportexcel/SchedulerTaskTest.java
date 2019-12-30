@@ -1,5 +1,7 @@
 package com.viewshine.exportexcel;
 
+import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
+import com.viewshine.exportexcel.utils.RedisUtils;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.slf4j.Logger;
@@ -26,6 +28,18 @@ public class SchedulerTaskTest {
 
     @Autowired
     private TaskScheduler deleteExcelScheduler;
+
+    @Autowired
+    private RedisUtils redisUtils;
+
+    @Test
+    public void redisTest() {
+        ExportExcelVo exportExcelVo = new ExportExcelVo();
+        redisUtils.set("test11","chang1");
+        redisUtils.set("testFloat", 1.3);
+        redisUtils.set("test",1);
+    }
+
 
     @Test
     public void test() throws InterruptedException {

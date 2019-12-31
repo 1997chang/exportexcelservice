@@ -35,7 +35,6 @@ public class ExportExcelThreadPoolConfig {
         threadPoolTaskExecutor.setThreadNamePrefix(exportExcelProperties.getPrefix());
         threadPoolTaskExecutor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         threadPoolTaskExecutor.setDaemon(true);
-        threadPoolTaskExecutor.initialize();
         return threadPoolTaskExecutor;
     }
 
@@ -52,7 +51,6 @@ public class ExportExcelThreadPoolConfig {
         threadPoolTaskScheduler.setRemoveOnCancelPolicy(true);
         threadPoolTaskScheduler.setAwaitTerminationSeconds(300);
         threadPoolTaskScheduler.setThreadNamePrefix("deleteE");
-        threadPoolTaskScheduler.initialize();
         return threadPoolTaskScheduler;
     }
 

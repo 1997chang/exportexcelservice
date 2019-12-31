@@ -9,7 +9,6 @@ import org.springframework.context.annotation.Import;
 /**
  * @author changWei[changwei@viewshine.cn]
  */
-//@EnableScheduling
 @SpringBootApplication(exclude = {DataSourceAutoConfiguration.class})
 @Import(MultiDataSourceAutoConfiguration.class)
 public class ExportExcelApplication {

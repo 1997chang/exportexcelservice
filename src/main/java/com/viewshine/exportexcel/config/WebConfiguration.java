@@ -11,6 +11,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.io.File;
 import java.util.Objects;
 
+import static com.viewshine.exportexcel.constants.DataSourceConstants.DOWNLOAD_FILE_INTERCEPTOR;
 import static com.viewshine.exportexcel.constants.DataSourceConstants.DOWNLOAD_FILE_URL_HANDLE;
 
 /**
@@ -21,6 +22,9 @@ public class WebConfiguration implements WebMvcConfigurer {
 
     @Autowired
     private DataSourceNameInterceptor dataSourceNameInterceptor;
+
+    @Autowired
+    private DownloadInterceptor downloadInterceptor;
 
     /**
      * 表示文件保存位置
@@ -39,8 +43,8 @@ public class WebConfiguration implements WebMvcConfigurer {
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(dataSourceNameInterceptor).addPathPatterns("/export/**")
-                .excludePathPatterns(DOWNLOAD_FILE_URL_HANDLE);
+        registry.addInterceptor(dataSourceNameInterceptor).addPathPatterns("");
+        registry.addInterceptor(downloadInterceptor).addPathPatterns(DOWNLOAD_FILE_INTERCEPTOR + "/**");
     }
 
     /**

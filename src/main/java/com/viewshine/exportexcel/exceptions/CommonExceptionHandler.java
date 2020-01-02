@@ -34,15 +34,4 @@ public class CommonExceptionHandler {
         return ResultVO.errorResult(Objects.requireNonNull(fieldError).getDefaultMessage());
     }
 
-    /**
-     * 表示处理所有剩余异常，没有被捕获的异常
-     * @param e
-     * @return
-     */
-    @ExceptionHandler(Exception.class)
-    public ResultVO<Void> exceptionHandle(Exception e) {
-        logger.error("系统错误：" + e.getMessage(), e);
-        return ResultVO.errorResult("系统繁忙，请稍后重试！！");
-    }
-
 }

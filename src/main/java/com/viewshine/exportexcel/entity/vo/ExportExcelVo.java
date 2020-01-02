@@ -25,6 +25,11 @@ public class ExportExcelVo implements Cloneable {
      */
     private String url;
 
+    /**
+     * 表示Excel资源定位
+     */
+    private String uri;
+
     @Override
     public ExportExcelVo clone() throws CloneNotSupportedException {
         return (ExportExcelVo) super.clone();

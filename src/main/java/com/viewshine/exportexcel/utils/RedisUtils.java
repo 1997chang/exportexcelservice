@@ -40,6 +40,10 @@ public class RedisUtils {
         return JSON.parseArray(value, zclass);
     }
 
+    public Boolean exits(String key) {
+        return stringRedisTemplate.hasKey(key);
+    }
+
     public void delete(String key) {
         stringRedisTemplate.delete(key);
     }

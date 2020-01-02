@@ -81,7 +81,8 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         ExportExcelVo exportExcelVo = new ExportExcelVo();
         exportExcelVo.setExcelId(CommonUtils.generateUUID());
         exportExcelVo.setStatus(DOWNLOADING);
-        exportExcelVo.setUrl(CommonUtils.getExportUrl(request, relativeFilePath.replace('\\', '/')));
+        exportExcelVo.setUri('/' + relativeFilePath.replace('\\', '/'));
+        exportExcelVo.setUrl(CommonUtils.getExportUrl(request, exportExcelVo.getExcelId()));
 
         exportExcelTaskExecutor.execute(() -> {
             try {
@@ -99,7 +100,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 downloadDoThing(filePath, requestExcelDTO.getSaveDay(), requestExcelDTO.getCallbackUrl(), exportExcelVo);
             } catch (Exception e){
                 logger.error("导出Excel出现错误。" +e.getMessage(), e);
-                throw new CommonRuntimeException();
+                exportErrorHandle(exportExcelVo);
             }
         });
         //保存到Redis中，设置为下载状态
@@ -231,5 +232,12 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 }).collect(Collectors.toList());
     }
 
+    /**
+     * 导出异常处理
+     * @param exportExcelVo
+     */
+    private void exportErrorHandle(ExportExcelVo exportExcelVo) {
+
+    }
 
 }

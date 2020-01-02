@@ -31,7 +31,6 @@ public class ExportExcelController {
     @PostMapping("/export/excelToDisk")
     public ResultVO<ExportExcelVo> exportExcelToDisk(@Valid @RequestBody RequestExcelDTO requestExcelDTO,
                                                       HttpServletRequest request) {
-        //TODO 完成MD5取值，从而防止重复提交
         logger.info("准备写入到本地磁盘文件中，传递的参数内容为：[{}]", JSON.toJSONString(requestExcelDTO));
         return exportExcelService.exportExcelToDisk(requestExcelDTO, request);
     }

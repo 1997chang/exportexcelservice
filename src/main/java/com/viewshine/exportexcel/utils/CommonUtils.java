@@ -15,8 +15,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.viewshine.exportexcel.constants.DataSourceConstants.DOWNLOAD_CALLBACK_PATH;
-import static com.viewshine.exportexcel.constants.DataSourceConstants.DOWNLOAD_FILE_URL;
+import static com.viewshine.exportexcel.constants.DataSourceConstants.*;
 
 /**
  * @author changWei[changwei@viewshine.cn]
@@ -119,13 +118,14 @@ public final class CommonUtils {
     /**
      * 用于获取最终返回的URL地址
      * @param request 当前请求
-     * @param exportExcelFileName 导出的文件名称
+     * @param excelId 导出的文件名称的唯一表示
      * @return 导出的URL地址
      */
-    public static String getExportUrl(HttpServletRequest request, String exportExcelFileName) {
+    public static String getExportUrl(HttpServletRequest request, String excelId) {
         return new StringBuilder(120).append(request.getScheme()).append("://").
                 append(request.getServerName()).append(":").append(request.getServerPort())
-                .append(request.getContextPath()).append(DOWNLOAD_FILE_URL).append("/").append(exportExcelFileName).toString();
+                .append(request.getContextPath()).append(DOWNLOAD_FILE_INTERCEPTOR).append("?")
+                .append(EXCELPARAM).append('=').append(excelId).toString();
     }
 
     /**

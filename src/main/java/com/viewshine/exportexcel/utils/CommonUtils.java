@@ -10,6 +10,8 @@ import org.springframework.lang.NonNull;
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
 import java.math.BigDecimal;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -80,6 +82,7 @@ public final class CommonUtils {
      * @return 返回计算值
      */
     public static BigDecimal computeFormula(@NonNull String formula, @NonNull Map<String, String> values) {
+
         Stack<OperationEnum> operation = new Stack<>();
         Stack<BigDecimal> numberStack = new Stack<>();
         int startIndex = 0;
@@ -129,16 +132,45 @@ public final class CommonUtils {
     }
 
     /**
-     * 用于获取回调的通知地址
-     * @param callback
+     * 根据请求获取客户端IP地址
+     * @param request
      * @return
      */
-    public static String getCallBackUrl(String callback) {
-        if (!(callback.startsWith("http://") || callback.startsWith("https://"))) {
-            logger.error("callBack地址错误，没有以http://或者https://开头");
-            return null;
+    public static String getClientHost(HttpServletRequest request) {
+        if (Objects.isNull(request)) {
+            return LOCAL_HOST;
         }
-        return new StringBuilder(120).append(callback).append(DOWNLOAD_CALLBACK_PATH).toString();
+        String ipAddress;
+        try {
+            ipAddress = request.getHeader("X-Forwarded-For");
+            if (StringUtils.isBlank(ipAddress) || UNKNOWN.equalsIgnoreCase(ipAddress)) {
+                ipAddress = request.getHeader("Proxy-Client-IP");
+            }
+            if (StringUtils.isBlank(ipAddress) || UNKNOWN.equalsIgnoreCase(ipAddress)) {
+                ipAddress = request.getHeader("WL-Proxy-Client-IP");
+            }
+            if (StringUtils.isBlank(ipAddress) || UNKNOWN.equalsIgnoreCase(ipAddress)) {
+                ipAddress = request.getRemoteAddr();
+                if (LOCAL_HOST.equals(ipAddress)) {
+                    InetAddress inet = null;
+                    try {
+                        inet = InetAddress.getLocalHost();
+                    } catch (UnknownHostException e) {
+                        logger.error(e.getMessage(), e);
+                        return LOCAL_HOST;
+                    }
+                    ipAddress = inet.getHostAddress();
+                }
+            }
+        } catch (Exception e) {
+            logger.error("获取客户端HOST错误，返回默认的HOST：[{}]", LOCAL_HOST);
+            return LOCAL_HOST;
+        }
+        if (StringUtils.isBlank(ipAddress)) {
+            return LOCAL_HOST;
+        } else {
+            return StringUtils.split(ipAddress, ",")[0];
+        }
     }
 
 }

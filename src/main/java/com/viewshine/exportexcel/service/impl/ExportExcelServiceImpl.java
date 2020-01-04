@@ -4,12 +4,14 @@ import cn.viewshine.cloudthree.excel.ExcelFactory;
 import com.alibaba.fastjson.JSON;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
+import com.viewshine.exportexcel.entity.thrift.Message;
 import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
 import com.viewshine.exportexcel.entity.vo.ResultVO;
 import com.viewshine.exportexcel.exceptions.CommonRuntimeException;
 import com.viewshine.exportexcel.properties.DataSourceNameHolder;
 import com.viewshine.exportexcel.service.ExportExcelService;
 import com.viewshine.exportexcel.utils.CommonUtils;
+import com.viewshine.exportexcel.utils.ExcelCallbackSocket;
 import com.viewshine.exportexcel.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -22,7 +24,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.TaskScheduler;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
@@ -39,7 +40,7 @@ import java.util.stream.Collectors;
 import static com.viewshine.exportexcel.constants.DataSourceConstants.EXPORT_EXCEL_REDIS_PREFIX;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.DOWNLOADING;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.FINISHED;
-import static com.viewshine.exportexcel.utils.CommonUtils.getCallBackUrl;
+import static com.viewshine.exportexcel.utils.CommonUtils.getClientHost;
 import static java.util.stream.Collectors.joining;
 
 /**
@@ -63,9 +64,6 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     private RedisUtils redisUtils;
 
     @Autowired
-    private RestTemplate restTemplate;
-
-    @Autowired
     private TaskScheduler deleteExcelScheduler;
 
     @Override
@@ -83,7 +81,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         exportExcelVo.setStatus(DOWNLOADING);
         exportExcelVo.setUri('/' + relativeFilePath.replace('\\', '/'));
         exportExcelVo.setUrl(CommonUtils.getExportUrl(request, exportExcelVo.getExcelId()));
-
+        String clientHost = getClientHost(request);
         exportExcelTaskExecutor.execute(() -> {
             try {
                 logger.info("最终选择的数据库为：{}", finalSelectDataSourceName);
@@ -97,7 +95,8 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 ExcelFactory.writeExcel(Collections.singletonMap("sheet1", excelContentData),
                         Collections.singletonMap("sheet1", excelHeadName), filePath);
                 logger.info("最终的文件路径地址；[{}]", filePath);
-                downloadDoThing(filePath, requestExcelDTO.getSaveDay(), requestExcelDTO.getCallbackUrl(), exportExcelVo);
+                downloadDoThing(filePath, requestExcelDTO.getSaveDay(), clientHost,
+                        requestExcelDTO.getThriftPort(), exportExcelVo);
             } catch (Exception e){
                 logger.error("导出Excel出现错误。" +e.getMessage(), e);
                 exportErrorHandle(exportExcelVo);
@@ -120,8 +119,8 @@ public class ExportExcelServiceImpl implements ExportExcelService {
      * 2.将删除文件到延迟任务中，从而删除文件
      * 3.通知请求放，提示下载完成
      */
-    private void downloadDoThing(String filePath, int saveDayCount, String callback, ExportExcelVo exportExcelVo) {
-
+    private void downloadDoThing(String filePath, int saveDayCount, String host, Integer thriftPort,
+                                 ExportExcelVo exportExcelVo) {
         ExportExcelVo clone = null;
         try {
             clone = exportExcelVo.clone();
@@ -133,23 +132,14 @@ public class ExportExcelServiceImpl implements ExportExcelService {
 
         redisUtils.set(EXPORT_EXCEL_REDIS_PREFIX + exportExcelVo.getExcelId(),clone , saveDayCount, TimeUnit.DAYS);
 
-        LocalDateTime deleteFIle = LocalDateTime.now().plusDays(saveDayCount);
-        deleteExcelScheduler.schedule(() -> {
-            try {
-                Files.deleteIfExists(Paths.get(filePath));
-            } catch (IOException e) {
-                logger.error("删除文件失败，请检查，文件名为：[{}]", filePath);
-                logger.error(e.getMessage(), e);
-                throw new CommonRuntimeException();
-            }
-        }, deleteFIle.toInstant(ZoneOffset.ofHours(8)));
+        deleteFileOnSchedule(filePath, saveDayCount);
 
-        if (StringUtils.isNotBlank(callback)) {
-            ResultVO resultVO = restTemplate.postForObject(getCallBackUrl(callback), clone, ResultVO.class);
-            if (Objects.isNull(resultVO) || ! Objects.equals(200, resultVO.getCode())) {
-                logger.error("通知回调方出现错误，传递的参数为：{}", JSON.toJSONString(exportExcelVo));
-                throw new RuntimeException("通知回调方出现错误，传递的参数为：" + JSON.toJSONString(exportExcelVo));
-            }
+        Message message = new Message();
+        message.setExcelId(clone.getExcelId());
+        message.setUrl(clone.getUrl());
+        boolean success = ExcelCallbackSocket.executeExcelBack(host, thriftPort, message);
+        if (!success) {
+            logger.error("执行回调失败");
         }
     }
 
@@ -233,11 +223,29 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     }
 
     /**
-     * 导出异常处理
-     * @param exportExcelVo
+     * 导出Excel异常处理
+     * @param exportExcelVo 导出Excel返回的对象
      */
     private void exportErrorHandle(ExportExcelVo exportExcelVo) {
+        logger.error("导出Excel出现错误，请检查。导出的Excel为：{}", JSON.toJSONString(exportExcelVo));
+    }
 
+    /**
+     * 定时删除文件
+     * @param filePath 文件所在地址
+     * @param saveDayCount 保存的天数
+     */
+    private void deleteFileOnSchedule(String filePath, int saveDayCount) {
+        LocalDateTime deleteFIle = LocalDateTime.now().plusDays(saveDayCount);
+        deleteExcelScheduler.schedule(() -> {
+            try {
+                Files.deleteIfExists(Paths.get(filePath));
+            } catch (IOException e) {
+                logger.error("删除文件失败，请检查，文件名为：[{}]", filePath);
+                logger.error(e.getMessage(), e);
+                throw new CommonRuntimeException();
+            }
+        }, deleteFIle.toInstant(ZoneOffset.ofHours(8)));
     }
 
 }

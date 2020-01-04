@@ -57,8 +57,8 @@ public class RequestExcelDTO {
     private String filePrefix;
 
     /**
-     * 表示回调地址
+     * 表示回调地址端口
      */
-    private String callbackUrl;
+    private Integer thriftPort;
 
 }

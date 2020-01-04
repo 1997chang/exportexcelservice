@@ -45,4 +45,15 @@ public class DataSourceConstants {
      */
     public static final String EXCELPARAM = "excelId";
 
+    /**
+     * 表示Thrift的连接超时时间
+     */
+    public static final int THRIFT_TIMEOUT = 3000;
+
+    /**
+     * 表示Thrift连接的客户端HOST
+     */
+    public static final String LOCAL_HOST = "127.0.0.1";
+
+    public static final String UNKNOWN = "unknown";
 }

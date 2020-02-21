@@ -80,7 +80,8 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         exportExcelVo.setExcelId(CommonUtils.generateUUID());
         exportExcelVo.setStatus(DOWNLOADING);
         exportExcelVo.setUri('/' + relativeFilePath.replace('\\', '/'));
-        exportExcelVo.setUrl(CommonUtils.getExportUrl(request, exportExcelVo.getExcelId()));
+        exportExcelVo.setUrl(CommonUtils.getExportUrl(request, exportExcelVo.getExcelId(),
+                requestExcelDTO.getExportUrlPrefix()));
         String clientHost = getClientHost(request);
         exportExcelTaskExecutor.execute(() -> {
             try {

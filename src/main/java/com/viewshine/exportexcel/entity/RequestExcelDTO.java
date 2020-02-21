@@ -61,4 +61,9 @@ public class RequestExcelDTO {
      */
     private Integer thriftPort;
 
+    /**
+     * 表示导出的Excel的URL地址
+     */
+    private String exportUrlPrefix;
+
 }

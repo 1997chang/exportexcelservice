@@ -122,12 +122,19 @@ public final class CommonUtils {
      * 用于获取最终返回的URL地址
      * @param request 当前请求
      * @param excelId 导出的文件名称的唯一表示
+     * @param exportUrlPrefix 表示导出路径的前缀
      * @return 导出的URL地址
      */
-    public static String getExportUrl(HttpServletRequest request, String excelId) {
-        return new StringBuilder(120).append(request.getScheme()).append("://").
-                append(request.getServerName()).append(":").append(request.getServerPort())
-                .append(request.getContextPath()).append(DOWNLOAD_FILE_INTERCEPTOR).append("?")
+    public static String getExportUrl(HttpServletRequest request, String excelId, String exportUrlPrefix) {
+        StringBuilder result = new StringBuilder(120);
+        if (StringUtils.isNotBlank(exportUrlPrefix)) {
+            result.append(exportUrlPrefix);
+        } else {
+            result.append(request.getScheme()).append("://").
+                    append(request.getServerName()).append(":").append(request.getServerPort())
+                    .append(request.getContextPath());
+        }
+        return result.append(DOWNLOAD_FILE_INTERCEPTOR).append("?")
                 .append(EXCELPARAM).append('=').append(excelId).toString();
     }
 

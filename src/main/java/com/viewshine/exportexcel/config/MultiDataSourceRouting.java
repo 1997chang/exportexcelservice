@@ -22,7 +22,7 @@ public class MultiDataSourceRouting extends AbstractRoutingDataSource {
         setTargetDataSources(multiDataSource);
         setDataSourceLookup(dataSourceLookup);
         setLenientFallback(false);
-        afterPropertiesSet();
+//        afterPropertiesSet();
     }
 
     @Override

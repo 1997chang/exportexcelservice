@@ -22,6 +22,9 @@ spring:
         min-idle: 1
         max-idle: 8
         max-wait: 60s
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/example
 #  task:
 #    scheduling:
 #      thread-name-prefix: deleteExcel-

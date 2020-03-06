@@ -1,0 +1,8 @@
+spring:
+  data:
+    mongodb:
+      multi:
+        one:
+          uri: mongodb://localhost:27017/example
+        two:
+          uri: mongodb://ygp:admin%40test@192.168.18.203:27017/ygp

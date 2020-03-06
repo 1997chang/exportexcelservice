@@ -9,12 +9,13 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
+ * 配置MySQL的的数据源信息
  * @author ChangWei[changwei@viewshine.cn]
  */
 @ConfigurationProperties(prefix = "spring.datasource.excel")
 @Data
 @Profile(value = "multidatasource")
-public class MultiDataSourceProperties {
+public class MysqlMultiDataSourceProperties {
 
     /**
      * 表示多个数据源的

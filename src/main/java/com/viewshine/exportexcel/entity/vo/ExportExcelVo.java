@@ -11,7 +11,7 @@ import lombok.Data;
 public class ExportExcelVo implements Cloneable {
 
     /**
-     * 表示一个唯一标识
+     * 表示一个唯一标识，用于查询一个文件的下载状态或者文件基本信息
      */
     private String excelId;
 
@@ -21,7 +21,7 @@ public class ExportExcelVo implements Cloneable {
     private ExcelDownloadStatus status;
 
     /**
-     * 表示下载Excel的文件路径地址
+     * 表示下载Excel的文件路径地址，使用这个请求进行下载文件
      */
     private String url;
 

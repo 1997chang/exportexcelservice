@@ -1,7 +1,7 @@
 package com.viewshine.exportexcel.entity.enums;
 
 /**
- * 表示Excel的下载状态
+ * 表示Excel文件的下载状态
  * @author changWei[changwei@viewshine.cn]
  */
 public enum ExcelDownloadStatus {

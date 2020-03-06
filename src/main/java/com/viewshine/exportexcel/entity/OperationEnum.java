@@ -1,6 +1,5 @@
 package com.viewshine.exportexcel.entity;
 
-import com.viewshine.exportexcel.exceptions.CommonRuntimeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,8 +17,8 @@ public enum OperationEnum {
     SUBTRACT(2, '-', BigDecimal::subtract),
     MULTI(1, '*', BigDecimal::multiply),
     DIVIDE(1, '/', BigDecimal::divide);
-//    LEFT_PARENTHESIS(3, '(', BigDecimal::divide),
-//    RIGHT_PARENTHESIS(0, ')', BigDecimal::divide);
+//    LEFT_PARENTHESIS(3, '(', null),
+//    RIGHT_PARENTHESIS(0, ')', null);
 
     private static final Logger logger = LoggerFactory.getLogger(OperationEnum.class);
 
@@ -49,7 +48,7 @@ public enum OperationEnum {
     }
 
     /**
-     * 表示上一个操作符是否弹出计算
+     * 表示上一个操作符是否要弹出计算，假如2 * 3 + 2，则2 * 3 要弹出计算，preOperation为*，当前为+
      * @param preOperation 表示上一个操作符
      * @return true表示弹出计算，否则，不用弹出计算
      */
@@ -83,7 +82,8 @@ public enum OperationEnum {
      * @return 操作枚举
      */
     public static OperationEnum getInstance(char operation) {
-        return Arrays.stream(values()).filter(operationEnum -> Objects.equals(operationEnum.operation, operation)).
-                findFirst().orElseThrow(CommonRuntimeException::new);
+        return Arrays.stream(values()).parallel()
+                .filter(operationEnum -> Objects.equals(operationEnum.operation, operation)).
+                findAny().orElseThrow(() -> new IllegalArgumentException("传递操作符" + operation + "不存在，"));
     }
 }

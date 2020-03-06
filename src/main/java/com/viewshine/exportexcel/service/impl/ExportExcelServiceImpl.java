@@ -2,15 +2,17 @@ package com.viewshine.exportexcel.service.impl;
 
 import cn.viewshine.cloudthree.excel.ExcelFactory;
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
 import com.viewshine.exportexcel.entity.thrift.Message;
 import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
+import com.viewshine.exportexcel.entity.vo.QueryExcelVo;
 import com.viewshine.exportexcel.entity.vo.ResultVO;
-import com.viewshine.exportexcel.exceptions.CommonRuntimeException;
-import com.viewshine.exportexcel.properties.DataSourceNameHolder;
+import com.viewshine.exportexcel.exceptions.BusinessException;
 import com.viewshine.exportexcel.service.ExportExcelService;
 import com.viewshine.exportexcel.utils.CommonUtils;
+import com.viewshine.exportexcel.utils.DataSourceHolder;
 import com.viewshine.exportexcel.utils.ExcelCallbackSocket;
 import com.viewshine.exportexcel.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
@@ -40,6 +42,7 @@ import java.util.stream.Collectors;
 import static com.viewshine.exportexcel.constants.DataSourceConstants.EXPORT_EXCEL_REDIS_PREFIX;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.DOWNLOADING;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.FINISHED;
+import static com.viewshine.exportexcel.exceptions.enums.BusinessErrorCode.DELETE_FILE_ERROR;
 import static com.viewshine.exportexcel.utils.CommonUtils.getClientHost;
 import static java.util.stream.Collectors.joining;
 
@@ -72,9 +75,9 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 requestExcelDTO.getFilePrefix());
 
         if (StringUtils.isNotBlank(requestExcelDTO.getDatasource())) {
-            DataSourceNameHolder.setActiveDataSource(requestExcelDTO.getDatasource());
+            DataSourceHolder.setActiveDataSourceName(requestExcelDTO.getDatasource());
         }
-        String finalSelectDataSourceName = DataSourceNameHolder.getActiveDataSource();
+        String finalSelectDataSourceName = DataSourceHolder.getActiveDataSourceName();
 
         ExportExcelVo exportExcelVo = new ExportExcelVo();
         exportExcelVo.setExcelId(CommonUtils.generateUUID());
@@ -86,7 +89,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         exportExcelTaskExecutor.execute(() -> {
             try {
                 logger.info("最终选择的数据库为：{}", finalSelectDataSourceName);
-                DataSourceNameHolder.setActiveDataSource(finalSelectDataSourceName);
+                DataSourceHolder.setActiveDataSourceName(finalSelectDataSourceName);
                 logger.info("准备将数据导出到Excel中");
                 List<List<String>> excelContentData = getExcelContentData(requestExcelDTO);
                 logger.info("查询出来的数据内容为：[{}]", JSON.toJSONString(excelContentData));
@@ -111,7 +114,22 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     @Override
     public ResultVO<ExportExcelVo> queryByExcelId(String uuid) {
         ExportExcelVo exportExcelVo = redisUtils.get(EXPORT_EXCEL_REDIS_PREFIX + uuid, ExportExcelVo.class);
+        logger.info("从redis中获取key:[{}]的数据：{}", EXPORT_EXCEL_REDIS_PREFIX + uuid,
+                JSONObject.toJSONString(exportExcelVo));
         return ResultVO.successResult(exportExcelVo);
+    }
+
+    @Override
+    public ResultVO<QueryExcelVo> queryStatusByExcelId(String uuid) {
+        ExportExcelVo exportExcelVo = redisUtils.get(EXPORT_EXCEL_REDIS_PREFIX + uuid, ExportExcelVo.class);
+        logger.info("从redis中获取key:[{}]的数据：{}", EXPORT_EXCEL_REDIS_PREFIX + uuid,
+                JSONObject.toJSONString(exportExcelVo));
+        QueryExcelVo queryExcelVo = new QueryExcelVo();
+        queryExcelVo.setFinish(false);
+        if (Objects.nonNull(exportExcelVo) && Objects.equals(FINISHED, exportExcelVo.getStatus())) {
+            queryExcelVo.setFinish(true);
+        }
+        return ResultVO.successResult(queryExcelVo);
     }
 
     /**
@@ -193,7 +211,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 } catch (Exception e) {
                     logger.error("获取SQL数据内容错误" + e.getMessage(), e);
                     //TODO 获取数据库中的数据内容错误，抛出相应错误
-                    throw new CommonRuntimeException();
+                    throw new RuntimeException();
                 }
                 dataMap.put(columnDTO.getColumnName(), dataValue);
             });
@@ -244,7 +262,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
             } catch (IOException e) {
                 logger.error("删除文件失败，请检查，文件名为：[{}]", filePath);
                 logger.error(e.getMessage(), e);
-                throw new CommonRuntimeException();
+                throw new BusinessException(DELETE_FILE_ERROR);
             }
         }, deleteFIle.toInstant(ZoneOffset.ofHours(8)));
     }

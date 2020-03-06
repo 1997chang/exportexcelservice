@@ -1,6 +1,7 @@
 package com.viewshine.exportexcel.exceptions;
 
 import com.viewshine.exportexcel.entity.vo.ResultVO;
+import com.viewshine.exportexcel.exceptions.enums.BusinessErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.MethodParameter;
@@ -9,10 +10,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.Objects;
-
 /**
- * 这个表示异常处理类
+ * 这个表示异常处理类，只有@RestController或者Controller中抛出的异常才会进入这个方法中。其他的都不会进入这个异常处理。
  * @author ChangWei[changwei@viewshine.cn]
  */
 @RestControllerAdvice
@@ -31,7 +30,18 @@ public class CommonExceptionHandler {
         logger.error("在执行{}.{}的时候出现绑定JSON数据参数异常，字段名称为：{}，提示消息：{}",
                 parameter.getDeclaringClass().getName(), parameter.getMethod().getName(), fieldError.getField(),
                 fieldError.getDefaultMessage());
-        return ResultVO.errorResult(Objects.requireNonNull(fieldError).getDefaultMessage());
+        return ResultVO.errorResult(fieldError.getDefaultMessage());
+    }
+
+    /**
+     * 用于处理在导出Excel中出现的异常问题
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResultVO<Void> businessExceptionHandle(BusinessException businessException) {
+        BusinessErrorCode errorCode = businessException.getErrorCode();
+        logger.error("执行业务逻辑出现错误：错误编码是：[{}]，错误消息是：[{}]",
+                errorCode.getCode(), errorCode.getMessage());
+        return new ResultVO<>(errorCode.getCode(), errorCode.getMessage());
     }
 
 }

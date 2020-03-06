@@ -1,7 +1,7 @@
 package com.viewshine.exportexcel;
 
 import com.alibaba.fastjson.JSON;
-import com.viewshine.exportexcel.properties.DataSourceNameHolder;
+import com.viewshine.exportexcel.utils.DataSourceHolder;
 import org.assertj.core.api.Assertions;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,7 +29,7 @@ public class ExportExcelApplicationTest {
 
     @Test
     public void selectOneDataSource() {
-        DataSourceNameHolder.setActiveDataSource("one");
+        DataSourceHolder.setActiveDataSourceName("one");
 //        System.out.println(JSON.toJSONString(jdbcTemplate.queryForList("select * from users")));
         jdbcTemplate.query("select id, username as userName, password pass from users", (rs, rowCount) -> {
             List<String> itemData = new ArrayList<>();
@@ -60,7 +60,7 @@ public class ExportExcelApplicationTest {
 
     @Test
     public void selectTwoDataSource() {
-        DataSourceNameHolder.setActiveDataSource("one");
+        DataSourceHolder.setActiveDataSourceName("one");
         System.out.println(JSON.toJSONString(jdbcTemplate.queryForList("select * from countrylanguage")));
     }
 

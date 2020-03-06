@@ -3,6 +3,7 @@ package com.viewshine.exportexcel.entity.vo;
 import lombok.Data;
 
 /**
+ * 用于查询Excel是否下载成功。
  * @author ChangWei[changwei@viewshine.cn]
  */
 @Data

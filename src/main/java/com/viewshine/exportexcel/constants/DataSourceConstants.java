@@ -16,17 +16,18 @@ public class DataSourceConstants {
     public static final String HTTP_DATASOURCE_NAME = "datasource";
 
     /**
-     * 表示下载文件的路径地址,静态资源对应的目录
+     * 表示web请求中，设置要连接的数据源的类型的参数名称，（MONGODB，MYSQL等等）
+     */
+    public static final String HTTP_DATASOURCE_TYPE = "type";
+
+    /**
+     * 表示静态资源的拦截的请求地址，如果是这个请求地址，就会进入静态目录下下载对应的目录
      */
     public static final String DOWNLOAD_FILE_URL = "/download";
 
     /**
-     * 表示静态资源对应地址
-     */
-    public static final String DOWNLOAD_FILE_URL_HANDLE = DOWNLOAD_FILE_URL + "/**";
-
-    /**
-     * 表示今天资源下载的拦截器
+     * 下载文件的拦截器地址，如果这个地址，就会进入DownloadInterceptor拦截器，
+     *          进行地址进行重定向到/download，然后到静态目录下文件
      */
     public static final String DOWNLOAD_FILE_INTERCEPTOR = "/downloadExcel";
 

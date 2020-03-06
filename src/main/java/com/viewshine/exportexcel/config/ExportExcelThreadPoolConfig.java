@@ -21,9 +21,9 @@ public class ExportExcelThreadPoolConfig {
     private final static Logger logger = LoggerFactory.getLogger(ExportExcelThreadPoolConfig.class);
 
     /**
-     * 使用多线程进行Excel的下载本地，或者直接通过浏览器下载
-     * @param exportExcelProperties
-     * @return
+     * 当收到一个请求的时候，开启一个线程从数据源中获取数据，然后保存到本地磁盘上
+     * @param exportExcelProperties 导出Excel属性
+     * @return 线程池对象
      */
     @Bean
     public TaskExecutor exportExcelTaskExecutor(ExportExcelProperties exportExcelProperties) {
@@ -38,6 +38,10 @@ public class ExportExcelThreadPoolConfig {
         return threadPoolTaskExecutor;
     }
 
+    /**
+     * 使用线程池计划任务完成下载文件的删除任务。
+     * @return 计划任务线程池
+     */
     @Bean
     public TaskScheduler deleteExcelScheduler() {
         ThreadPoolTaskScheduler threadPoolTaskScheduler = new ThreadPoolTaskScheduler();
@@ -50,7 +54,7 @@ public class ExportExcelThreadPoolConfig {
         });
         threadPoolTaskScheduler.setRemoveOnCancelPolicy(true);
         threadPoolTaskScheduler.setAwaitTerminationSeconds(300);
-        threadPoolTaskScheduler.setThreadNamePrefix("deleteE");
+        threadPoolTaskScheduler.setThreadNamePrefix("deleteExcel");
         return threadPoolTaskScheduler;
     }
 

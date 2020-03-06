@@ -1,4 +1,4 @@
-package com.viewshine.exportexcel.config;
+package com.viewshine.exportexcel.interceptors;
 
 import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
 import com.viewshine.exportexcel.utils.RedisUtils;
@@ -14,6 +14,8 @@ import javax.servlet.http.HttpServletResponse;
 import static com.viewshine.exportexcel.constants.DataSourceConstants.*;
 
 /**
+ * 下载文件请求的拦截器。
+ *      如果请求是/downloadExcel/开头的请求，就会进行请求重定向，重定向到/download，从而从虚拟目录中下载文件
  * @author changWei[changwei@viewshine.cn]
  */
 @Component
@@ -32,7 +34,7 @@ public class DownloadInterceptor extends HandlerInterceptorAdapter {
             response.sendRedirect(DOWNLOAD_FILE_URL + "/" + exportExcelVo.getUri());
             return false;
         }
-        logger.error("下载的资源文件已经删除，搜索的ID为：{}", parameter);
+        logger.error("下载的Excel文件已经删除，搜索的ExcelID为：{}", parameter);
         return true;
     }
 }

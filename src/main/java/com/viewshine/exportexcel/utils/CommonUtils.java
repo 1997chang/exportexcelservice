@@ -1,7 +1,6 @@
 package com.viewshine.exportexcel.utils;
 
 import com.viewshine.exportexcel.entity.OperationEnum;
-import com.viewshine.exportexcel.exceptions.CommonRuntimeException;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -64,14 +63,13 @@ public final class CommonUtils {
      */
     public static String formatFileOnSystem(String filePath) {
         char separatorChar = File.separatorChar;
-        if (separatorChar == '\\') {
+        if (separatorChar == '\\') {                                //window系统下，将所有的/转化为\
             return filePath.replace('/', separatorChar);
-        } else if (separatorChar == '/'){
+        } else if (separatorChar == '/'){                           //Linux系统下，将所有的\转化为/
             return filePath.replace('\\', separatorChar);
         } else {
-            logger.error("不能确定当前系统");
-            //TODO 抛出不能确定当前系统
-            throw new CommonRuntimeException();
+            logger.error("不能确定当前系统。File.separatorChar不是[\\]也不是[/]");
+            throw new RuntimeException("不能确定当前系统。File.separatorChar不是[\\]也不是[/]");
         }
     }
 

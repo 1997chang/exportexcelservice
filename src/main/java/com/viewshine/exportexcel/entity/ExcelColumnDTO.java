@@ -3,6 +3,7 @@ package com.viewshine.exportexcel.entity;
 import lombok.Data;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 表示导出Excel表格的列的相关属性
@@ -12,7 +13,7 @@ import java.util.List;
 public class ExcelColumnDTO {
 
     /**
-     * 表示SQL语句中对应的列名
+     * 表示SQL语句中对应的列名，或者Mongo数据库中的列名
      */
     private String columnName;
 
@@ -25,6 +26,11 @@ public class ExcelColumnDTO {
      * 表示输出到Excel表格中的头数据
      */
     private List<String> excelHeadName;
+
+    /**
+     * 值的映射关系
+     */
+    private Map<String, String> mapping;
 
     /**
      * 表示这一列的值使用公式计算出来

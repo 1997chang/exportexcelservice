@@ -18,7 +18,7 @@ public class RequestExcelDTO {
     /**
      * 表示执行的SQL语句
      */
-    @NotBlank(message = "执行的SQL语句不能为NULL")
+    @NotBlank(message = "执行的SQL语句不能为NULL，或者Query不能为空")
     private String sql;
 
     /**
@@ -57,12 +57,12 @@ public class RequestExcelDTO {
     private String filePrefix;
 
     /**
-     * 表示回调地址端口
+     * 表示回调地址端口，从而进行下载完成的通知
      */
     private Integer thriftPort;
 
     /**
-     * 表示导出的Excel的URL地址
+     * 指定导出文件的地址，如果为空的话，使用当前请求的URL地址
      */
     private String exportUrlPrefix;
 

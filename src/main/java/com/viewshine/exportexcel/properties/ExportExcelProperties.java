@@ -4,6 +4,7 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
+ * 导出Excel的线程池属性
  * @author changWei[changwei@viewshine.cn]
  */
 @ConfigurationProperties(prefix = "export.excel.service.threadpool")

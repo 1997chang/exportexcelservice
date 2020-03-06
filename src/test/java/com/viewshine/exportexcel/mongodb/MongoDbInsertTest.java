@@ -2,7 +2,6 @@ package com.viewshine.exportexcel.mongodb;
 
 import com.alibaba.fastjson.JSONObject;
 import com.mongodb.client.MongoClients;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.data.mongodb.core.MongoOperations;
@@ -36,10 +35,10 @@ public class MongoDbInsertTest {
     }
 
 
-    @After
-    public void after() {
-        mongoOperations.dropCollection(PeopleInEarth.class);
-    }
+//    @After
+//    public void after() {
+//        mongoOperations.dropCollection(PeopleInEarth.class);
+//    }
 
 }
 

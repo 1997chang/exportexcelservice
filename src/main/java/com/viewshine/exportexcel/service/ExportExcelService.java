@@ -2,6 +2,7 @@ package com.viewshine.exportexcel.service;
 
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
 import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
+import com.viewshine.exportexcel.entity.vo.QueryExcelVo;
 import com.viewshine.exportexcel.entity.vo.ResultVO;
 
 import javax.servlet.http.HttpServletRequest;
@@ -19,9 +20,16 @@ public interface ExportExcelService {
     ResultVO<ExportExcelVo> exportExcelToDisk(RequestExcelDTO requestExcelDTO, HttpServletRequest httpServletRequest);
 
     /**
-     * 表示根据UUID获取对应文件的下载状态
+     * 表示根据UUID获取对应文件的基本信息
      * @param uuid excelId
-     * @return 下载状态
+     * @return 基本信息
      */
     ResultVO<ExportExcelVo> queryByExcelId(String uuid);
+
+    /**
+     * 根据Excel的UUID获取对应文件的下载状态
+     * @param excelId Excel的唯一标识
+     * @return 下载状态
+     */
+    ResultVO<QueryExcelVo> queryStatusByExcelId(String excelId);
 }

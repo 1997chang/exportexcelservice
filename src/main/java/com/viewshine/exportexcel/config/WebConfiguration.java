@@ -59,7 +59,7 @@ public class WebConfiguration implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         StringBuilder downloadFilePath = new StringBuilder("file:");
-        downloadFilePath.append(CommonUtils.formatFileOnSystem(docFilePath));
+        downloadFilePath.append(CommonUtils.formatPathOnSystem(docFilePath));
         char separatorChar = File.separatorChar;
         if (! Objects.equals(separatorChar, downloadFilePath.charAt(downloadFilePath.length() - 1))) {
             downloadFilePath.append(separatorChar);

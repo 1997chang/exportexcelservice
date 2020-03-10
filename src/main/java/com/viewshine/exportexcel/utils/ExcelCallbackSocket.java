@@ -18,6 +18,7 @@ import java.util.Objects;
 import static com.viewshine.exportexcel.constants.DataSourceConstants.THRIFT_TIMEOUT;
 
 /**
+ * Excel下载完成的回调通知器
  * @author changWei[changwei@viewshine.cn]
  */
 public class ExcelCallbackSocket {
@@ -41,22 +42,35 @@ public class ExcelCallbackSocket {
         client = new AutoListenerService.Client(tProtocol);
     }
 
+    /**
+     * 调用这个方法将会通知客户端Excel文件下载完成。进行Excel下载。
+     *     1.创建一个Tsocket的客户端。
+     *     2.通知客户端文件下载完成。
+     * @param host 客户端的主机
+     * @param port 客户端的端口
+     * @param message 通知的消息
+     * @return 是否通知到
+     */
     public static boolean executeExcelBack(String host, int port, Message message) {
+        logger.info("Excel文件下载完成，准备通知客户端进行下载。客户端的HOST：[{}]，PORT：[{}]，Excel的ID：[{}]",
+                host, port, message.excelId);
         ExcelCallbackSocket excelCallbackSocket = new ExcelCallbackSocket(host, port);
         try {
             excelCallbackSocket.tTransport.open();
             ResultCallback callback = excelCallbackSocket.client.callbacl(message);
             if (callback.getCode() == 200) {
+                logger.info("Excel文件下载通知客户端成功。");
                 return true;
             } else {
-                logger.error("消息回调的客户端出现错误，没有返回200，返回的内容为：{}", JSON.toJSONString(callback));
+                logger.error("消息通知客户端出现错误，没有返回200，返回的内容为：{}", JSON.toJSONString(callback));
                 return false;
             }
         } catch (TException e) {
-            logger.error("执行回调出现错误。host:[{}]，port:[{}]", host, port);
+            e.printStackTrace();
+            logger.error("执行消息通知出现错误。host:[{}]，port:[{}]", host, port);
             logger.error(e.getMessage(), e);
         } finally {
-            if (!Objects.isNull(excelCallbackSocket.tTransport)) {
+            if (Objects.nonNull(excelCallbackSocket.tTransport)) {
                 excelCallbackSocket.tTransport.close();
             }
         }

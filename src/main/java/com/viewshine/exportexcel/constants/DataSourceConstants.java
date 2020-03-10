@@ -56,5 +56,8 @@ public class DataSourceConstants {
      */
     public static final String LOCAL_HOST = "127.0.0.1";
 
+    /**
+     * 未知的请求地址
+     */
     public static final String UNKNOWN = "unknown";
 }

@@ -27,6 +27,11 @@ public class RequestExcelDTO {
     private Object[] sqlParams;
 
     /**
+     * 在MongoDB数据的那个收集器下执行语句
+     */
+    private String collectionName;
+
+    /**
      * 表示选择的数据源名称
      */
     @NotBlank(message = "没有指定选择的数据库名称")

@@ -6,6 +6,8 @@ import static com.viewshine.exportexcel.constants.DataSourceConstants.DEFAULT_DA
 
 /**
  * 这个表示数据库名称选择器，每个线程过这个进行选择具体的数据库
+ *      1.保存选择的数据库的类型
+ *      2.保存选择的数据库的名称
  * @author ChangWei[changwei@viewshine.cn]
  */
 public class DataSourceHolder {

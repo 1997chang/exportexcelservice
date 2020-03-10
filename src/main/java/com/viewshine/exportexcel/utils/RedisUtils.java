@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
+ * Redis的工具类：某一个Key是否存在，保存KeyValue值，获取某一个Key的值，删除某一个Key的值
  * @author ChangWei[changwei@viewshine.cn]
  */
 @Component
@@ -48,6 +49,11 @@ public class RedisUtils {
         stringRedisTemplate.delete(key);
     }
 
+    /**
+     * 将一个对象转化为字符串
+     * @param value 转化的对象
+     * @return 对象字符串
+     */
     private String valueToString(Object value) {
         if (value instanceof String) {
             return value.toString();

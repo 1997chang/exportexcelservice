@@ -41,7 +41,7 @@ public class CommonExceptionHandler {
         BusinessErrorCode errorCode = businessException.getErrorCode();
         logger.error("执行业务逻辑出现错误：错误编码是：[{}]，错误消息是：[{}]",
                 errorCode.getCode(), errorCode.getMessage());
-        return new ResultVO<>(errorCode.getCode(), errorCode.getMessage());
+        return ResultVO.errorResult(errorCode.getCode(), errorCode.getMessage());
     }
 
 }

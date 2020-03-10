@@ -5,6 +5,7 @@ import com.viewshine.exportexcel.utils.RedisUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.handler.HandlerInterceptorAdapter;
 
@@ -26,11 +27,17 @@ public class DownloadInterceptor extends HandlerInterceptorAdapter {
     @Autowired
     private RedisUtils redisUtils;
 
+    @Value("${export.excel.docFilePath}")
+    private String docFilePath;
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String parameter = request.getParameter(EXCELPARAM);
+        logger.info("接收到下载文件请求，准备下载ExcelID：[{}]的文件", parameter);
         if (redisUtils.exits(EXPORT_EXCEL_REDIS_PREFIX + parameter)) {
             ExportExcelVo exportExcelVo = redisUtils.get(EXPORT_EXCEL_REDIS_PREFIX + parameter, ExportExcelVo.class);
+            logger.info("下载ExcelID：[{}]的Excel文件，文件所在的目录：[{}/{}]",
+                    parameter, docFilePath , exportExcelVo.getUri());
             response.sendRedirect(DOWNLOAD_FILE_URL + "/" + exportExcelVo.getUri());
             return false;
         }

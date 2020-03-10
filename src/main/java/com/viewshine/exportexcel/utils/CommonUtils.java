@@ -15,10 +15,13 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.viewshine.exportexcel.constants.DataSourceConstants.*;
 
 /**
+ * 一些常用的工具类
  * @author changWei[changwei@viewshine.cn]
  */
 public final class CommonUtils {
@@ -30,9 +33,8 @@ public final class CommonUtils {
     private static final Map<Character, OperationEnum> operationMap;
 
     static {
-        operationMap = new HashMap<>((int)Math.ceil(OperationEnum.values().length * 4.0 /3));
-        Arrays.stream(OperationEnum.values()).forEach(operationEnum ->
-                operationMap.put(operationEnum.getOperation(), operationEnum));
+        operationMap= Arrays.stream(OperationEnum.values())
+                .collect(Collectors.toMap(OperationEnum::getOperation, Function.identity()));
     }
 
     private CommonUtils() {}
@@ -47,9 +49,15 @@ public final class CommonUtils {
     public static String generateExcelFileName(String directory, String prefix) {
         StringBuilder result = new StringBuilder(128);
         char separatorChar = File.separatorChar;
-        result.append(formatFileOnSystem(directory));
-        result.append(separatorChar);
-        result.append(prefix + '_');
+        result.append(formatPathOnSystem(directory));
+        //删除文件名的前导路径分隔符
+        if (separatorChar == result.charAt(0)) {
+            result.deleteCharAt(0);
+        }
+        if (separatorChar != result.charAt(result.length() -1)) {
+            result.append(separatorChar);
+        }
+        result.append(prefix).append('_');
         String currentDateString = DateTimeFormatter.ofPattern(YYYYMMDDHHMMSS).format(LocalDateTime.now());
         result.append(currentDateString);
         result.append(ThreadLocalRandom.current().nextInt(100000, 1000000));
@@ -61,7 +69,7 @@ public final class CommonUtils {
      * 根据当前系统，将路径地址转化为当前系统正确地址
      * @return 对应系统的路径地址
      */
-    public static String formatFileOnSystem(String filePath) {
+    public static String formatPathOnSystem(String filePath) {
         char separatorChar = File.separatorChar;
         if (separatorChar == '\\') {                                //window系统下，将所有的/转化为\
             return filePath.replace('/', separatorChar);
@@ -79,19 +87,37 @@ public final class CommonUtils {
      * @param values 公式中对应的值
      * @return 返回计算值
      */
-    public static BigDecimal computeFormula(@NonNull String formula, @NonNull Map<String, String> values) {
-
+    public static BigDecimal computeFormula(@NonNull String formula, @NonNull Map<String, Object> values) {
         Stack<OperationEnum> operation = new Stack<>();
         Stack<BigDecimal> numberStack = new Stack<>();
         int startIndex = 0;
         int currentIndex = 0;
         int formulaLength = formula.length();
+        boolean addNumber = true;
         while (currentIndex < formulaLength) {
-            //TODO 没有完成括号的计算
             if (operationMap.containsKey(formula.charAt(currentIndex))) {
                 OperationEnum currentOperation = operationMap.get(formula.charAt(currentIndex));
-                numberStack.push(new BigDecimal(values.get(StringUtils.deleteWhitespace(formula.substring(startIndex,
-                        currentIndex)))));
+                if (currentOperation == OperationEnum.LEFT_PARENTHESIS) {
+                    operation.push(currentOperation);
+                    currentIndex++;
+                    startIndex = currentIndex;
+                    continue;
+                }
+                if (addNumber) {
+                    String operationNum = StringUtils.deleteWhitespace(formula.substring(startIndex, currentIndex));
+                    numberStack.add(new BigDecimal(values.getOrDefault(operationNum, operationNum).toString()));
+                }
+                addNumber = true;
+                if (currentOperation == OperationEnum.RIGHT_PARENTHESIS) {
+                    while (operation.peek() != OperationEnum.LEFT_PARENTHESIS) {
+                        numberStack.push(operation.pop().compute(numberStack.pop(), numberStack.pop()));
+                    }
+                    operation.pop();
+                    addNumber = false;
+                    currentIndex++;
+                    startIndex = currentIndex;
+                    continue;
+                }
                 if (!operation.isEmpty() && currentOperation.isCompute(operation.peek())) {
                     numberStack.push(operation.pop().compute(numberStack.pop(), numberStack.pop()));
                 }
@@ -100,8 +126,10 @@ public final class CommonUtils {
             }
             currentIndex++;
         }
-        numberStack.push(new BigDecimal(values.get(StringUtils.deleteWhitespace(formula.substring(startIndex,
-                formulaLength)))));
+        if (startIndex < formulaLength) {
+            String operationNum = StringUtils.deleteWhitespace(formula.substring(startIndex, currentIndex));
+            numberStack.add(new BigDecimal(values.getOrDefault(operationNum, operationNum).toString()));
+        }
         while (!operation.isEmpty()) {
             numberStack.push(operation.pop().compute(numberStack.pop(), numberStack.pop()));
         }
@@ -109,7 +137,7 @@ public final class CommonUtils {
     }
 
     /**
-     * 用于返回一个唯一标识
+     * 用于返回一个UUID唯一标识
      * @return UUIDString
      */
     public static String generateUUID() {
@@ -118,6 +146,8 @@ public final class CommonUtils {
 
     /**
      * 用于获取最终返回的URL地址
+     *      1.如果exportUrlPrefix不为空，以这个地址为返回地址的前缀，否则根据request的请求，返回远程服务器的地址
+     *      2.进行字符串的拼接，返回客户端最终可以下载的URL地址
      * @param request 当前请求
      * @param excelId 导出的文件名称的唯一表示
      * @param exportUrlPrefix 表示导出路径的前缀
@@ -137,12 +167,15 @@ public final class CommonUtils {
     }
 
     /**
-     * 根据请求获取客户端IP地址
-     * @param request
-     * @return
+     * 根据客户端的请求获取客户端的真实IP地址地址。
+     *     1.如果请求对象为空，返回127.0.0.1
+     *     2.否则获取真实IP地址
+     * @param request 请求对象
+     * @return 请求的真实IP地址
      */
     public static String getClientHost(HttpServletRequest request) {
         if (Objects.isNull(request)) {
+            logger.warn("请求对象为NULL，返回本地地址：[{}]", LOCAL_HOST);
             return LOCAL_HOST;
         }
         String ipAddress;
@@ -161,7 +194,7 @@ public final class CommonUtils {
                     try {
                         inet = InetAddress.getLocalHost();
                     } catch (UnknownHostException e) {
-                        logger.error(e.getMessage(), e);
+                        logger.error(e.getMessage() + "获取客户端地址失败，返回本地IP地址：" + LOCAL_HOST, e);
                         return LOCAL_HOST;
                     }
                     ipAddress = inet.getHostAddress();
@@ -172,9 +205,12 @@ public final class CommonUtils {
             return LOCAL_HOST;
         }
         if (StringUtils.isBlank(ipAddress)) {
+            logger.warn("没有获取到请求的真实IP地址，返回默认的本地地址：[{}]", LOCAL_HOST);
             return LOCAL_HOST;
         } else {
-            return StringUtils.split(ipAddress, ",")[0];
+            String host = StringUtils.split(ipAddress, ",")[0];
+            logger.info("客户端真实的IP地址为：[{}]", host);
+            return host;
         }
     }
 

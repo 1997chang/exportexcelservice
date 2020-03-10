@@ -3,8 +3,10 @@ package com.viewshine.exportexcel.service.impl;
 import cn.viewshine.cloudthree.excel.ExcelFactory;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.viewshine.exportexcel.datasource.MongoDataSourceRouting;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
+import com.viewshine.exportexcel.entity.enums.DataSourceType;
 import com.viewshine.exportexcel.entity.thrift.Message;
 import com.viewshine.exportexcel.entity.vo.ExportExcelVo;
 import com.viewshine.exportexcel.entity.vo.QueryExcelVo;
@@ -16,12 +18,15 @@ import com.viewshine.exportexcel.utils.DataSourceHolder;
 import com.viewshine.exportexcel.utils.ExcelCallbackSocket;
 import com.viewshine.exportexcel.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
 import org.springframework.scheduling.TaskScheduler;
@@ -34,17 +39,20 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static com.viewshine.exportexcel.constants.DataSourceConstants.EXPORT_EXCEL_REDIS_PREFIX;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.DOWNLOADING;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.FINISHED;
-import static com.viewshine.exportexcel.exceptions.enums.BusinessErrorCode.DELETE_FILE_ERROR;
+import static com.viewshine.exportexcel.exceptions.enums.BusinessErrorCode.*;
 import static com.viewshine.exportexcel.utils.CommonUtils.getClientHost;
 import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.toList;
 
 /**
  * @author changWei[changwei@viewshine.cn]
@@ -56,6 +64,9 @@ public class ExportExcelServiceImpl implements ExportExcelService {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private MongoDataSourceRouting mongoDataSourceRouting;
 
     @Autowired
     private TaskExecutor exportExcelTaskExecutor;
@@ -74,22 +85,25 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         String relativeFilePath = CommonUtils.generateExcelFileName(requestExcelDTO.getExportDirectory(),
                 requestExcelDTO.getFilePrefix());
 
-        if (StringUtils.isNotBlank(requestExcelDTO.getDatasource())) {
-            DataSourceHolder.setActiveDataSourceName(requestExcelDTO.getDatasource());
-        }
+//        if (StringUtils.isNotBlank(requestExcelDTO.getDatasource())) {
+//            DataSourceHolder.setActiveDataSourceName(requestExcelDTO.getDatasource());
+//        }
+        DataSourceType activeDataSourceType = DataSourceHolder.getActiveDataSourceType();
         String finalSelectDataSourceName = DataSourceHolder.getActiveDataSourceName();
 
         ExportExcelVo exportExcelVo = new ExportExcelVo();
         exportExcelVo.setExcelId(CommonUtils.generateUUID());
         exportExcelVo.setStatus(DOWNLOADING);
-        exportExcelVo.setUri('/' + relativeFilePath.replace('\\', '/'));
+        exportExcelVo.setUri(relativeFilePath.replace('\\', '/'));
         exportExcelVo.setUrl(CommonUtils.getExportUrl(request, exportExcelVo.getExcelId(),
                 requestExcelDTO.getExportUrlPrefix()));
         String clientHost = getClientHost(request);
         exportExcelTaskExecutor.execute(() -> {
             try {
+                logger.info("最终选择的数据库类型：[{}]", activeDataSourceType.getCName());
                 logger.info("最终选择的数据库为：{}", finalSelectDataSourceName);
                 DataSourceHolder.setActiveDataSourceName(finalSelectDataSourceName);
+                DataSourceHolder.setActiveDataSourceType(activeDataSourceType);
                 logger.info("准备将数据导出到Excel中");
                 List<List<String>> excelContentData = getExcelContentData(requestExcelDTO);
                 logger.info("查询出来的数据内容为：[{}]", JSON.toJSONString(excelContentData));
@@ -98,7 +112,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 String filePath = getFileSavePath(relativeFilePath);
                 ExcelFactory.writeExcel(Collections.singletonMap("sheet1", excelContentData),
                         Collections.singletonMap("sheet1", excelHeadName), filePath);
-                logger.info("最终的文件路径地址；[{}]", filePath);
+                logger.info("ExcelID：[{}]的文件导出成功，最终的文件路径地址；[{}]", exportExcelVo.getExcelId(), filePath);
                 downloadDoThing(filePath, requestExcelDTO.getSaveDay(), clientHost,
                         requestExcelDTO.getThriftPort(), exportExcelVo);
             } catch (Exception e){
@@ -169,7 +183,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
      */
     private String getFileSavePath(String exportFileName) {
         StringBuilder result = new StringBuilder(128);
-        result.append(CommonUtils.formatFileOnSystem(docFilePath));
+        result.append(CommonUtils.formatPathOnSystem(docFilePath));
         char separatorChar = File.separatorChar;
         if (! Objects.equals(separatorChar, result.charAt(result.length() - 1))) {
             result.append(separatorChar);
@@ -178,47 +192,92 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     }
 
     /**
-     * 用于获取SQL语句中执行的数据内容数据。
+     * 根据提供的Query查询内容，以及数据库的名称进行数据的查询
+     * @param requestExcelDTO 请求导出的Excel对象
+     * @return 导出的Excel数据内容
+     */
+    private List<List<String>> getExcelContentDataInMongo(final RequestExcelDTO requestExcelDTO) {
+        String collectionName = requestExcelDTO.getCollectionName();
+        if (StringUtils.isBlank(collectionName)) {
+            logger.error("没有为Mongo数据库提供查询的收集器名称");
+            throw new BusinessException(NO_COLLECTION_MONGO);
+        }
+        String dataSourceName = DataSourceHolder.getActiveDataSourceName();
+        if (StringUtils.isBlank(dataSourceName) || mongoDataSourceRouting.getDatasources().containsKey(dataSourceName)) {
+            logger.error("提供的数据库名[{}]为空或者Mongo路由不包含这个数据库名称", dataSourceName);
+            throw new BusinessException(DATASOURCE_NAME_ERROR);
+        }
+        logger.info("准备在MONGO的[{}]数据库中的[{}]集合中上执行查询语句", dataSourceName, collectionName);
+        MongoOperations mongoOperations = mongoDataSourceRouting.getDatasources().get(dataSourceName);
+        Query query = JSONObject.parseObject(requestExcelDTO.getSql(), Query.class);
+        List<Map<String, Object>> dataContent = mongoOperations.find(query, JSONObject.class, collectionName)
+                .stream().map(json -> (Map<String, Object>) json).collect(toList());
+        return getFinishExcelData(requestExcelDTO, dataContent);
+    }
+
+    /**
+     * 根据执行的SQL语句，SQL的参数值，以及查询导出的列进行数据的查询。
+     * @param requestExcelDTO 请求导出的Excel对象
+     * @return 返回查询的结果
+     */
+    private List<List<String>> getExcelContentDataInMysql(final RequestExcelDTO requestExcelDTO) {
+        logger.info("在MYSQL数据库上执行导出任务，查询的SQL语句为：[{}]，参数值列表为：[{}]",
+                requestExcelDTO.getSql(), JSONObject.toJSONString(requestExcelDTO.getSqlParams()));
+        List<Map<String, Object>> dataContent =
+                jdbcTemplate.queryForList(requestExcelDTO.getSql(), requestExcelDTO.getSqlParams());
+        return getFinishExcelData(requestExcelDTO, dataContent);
+    }
+
+    /**
+     * 用于获取最终导出的数据内容
+     *      1.普通的数据内容直接放入其中
+     *      2.如果映射关系mapping不为null的话，进行关系的映射
+     *      3.如果公式不为空的话，计算公式的内容
+     *      4.如果格式化不为空的话，进行格式化数据
+     * @param requestExcelDTO 请求的数据内容
+     * @param data 从数据库中查询的数据内容
+     * @return 最终导出的数据内容
+     */
+    private List<List<String>> getFinishExcelData(final RequestExcelDTO requestExcelDTO,
+                                                  final List<Map<String, Object>> data) {
+        return data.stream().map(entry -> requestExcelDTO.getExcelColumnDTOList().stream()
+                    .filter(columnDTO -> StringUtils.isNotBlank(columnDTO.getColumnName()))
+                    .map(columnDTO -> {
+                        if (MapUtils.isNotEmpty(columnDTO.getMapping())) {
+                            return columnDTO.getMapping()
+                                    .getOrDefault(entry.get(columnDTO.getColumnName()).toString(), "");
+                        } else if (StringUtils.isNotBlank(columnDTO.getFormula())) {
+                            return CommonUtils.computeFormula(columnDTO.getFormula(), entry).toPlainString();
+                        } else if (StringUtils.isNotBlank(columnDTO.getFormat())) {
+                            //TODO 处理日期
+                            return "";
+                        } else {
+                            return entry.getOrDefault(columnDTO.getColumnName(), "").toString();
+                        }
+                    }).collect(Collectors.toList())
+        ).collect(Collectors.toList());
+    }
+
+    /**
+     * 用于获取在任何指定的数据库中的导出数据内容。
      * 注意：最终选择的列，以requestExcelDTO属性中的excelColumnDTOList中指定的列的名称为准
      * @param requestExcelDTO 导出Excel的SQL语句，导出的列名等
-     * @return SQL执行的数据内容
+     * @return 导出的数据内容
      */
     @NonNull
     private List<List<String>> getExcelContentData(final RequestExcelDTO requestExcelDTO) {
         logger.info("准备获取数据内容，执行的SQL语句为：[{}]", requestExcelDTO.getSql());
         logger.info("最终导出的列名有：{}", requestExcelDTO.getExcelColumnDTOList().stream().
                 map(ExcelColumnDTO::getColumnName).filter(StringUtils::isNotBlank).collect(joining(",")));
-        long columnCount = requestExcelDTO.getExcelColumnDTOList().stream().map(ExcelColumnDTO::getColumnName).
-                filter(StringUtils::isNotBlank).count();
-        final Map<String, String> dataMap = new HashMap<>((int) Math.ceil(columnCount * 4 / 3));
-
-        List<List<String>> result = jdbcTemplate.query(requestExcelDTO.getSql(), (rs, rowCount) -> {
-            List<String> itemData = new ArrayList<>();
-            requestExcelDTO.getExcelColumnDTOList().stream().filter(columnDTO ->
-                    StringUtils.isNotBlank(columnDTO.getColumnName())).forEach(columnDTO -> {
-                String dataValue;
-                try {
-                    if (StringUtils.isNotBlank(columnDTO.getFormula())) {
-                        dataValue = CommonUtils.computeFormula(columnDTO.getFormula(), dataMap).toPlainString();
-                    } else if (StringUtils.isNotBlank(columnDTO.getFormat())) {
-                        LocalDateTime localDateTime = rs.getTimestamp(columnDTO.getColumnName(),
-                                Calendar.getInstance(TimeZone.getTimeZone("GMT+8"))).toLocalDateTime();
-                        dataValue = localDateTime.format(DateTimeFormatter.ofPattern(columnDTO.getFormat()));
-                    } else {
-                        dataValue = rs.getString(columnDTO.getColumnName());
-                    }
-                    itemData.add(dataValue);
-                } catch (Exception e) {
-                    logger.error("获取SQL数据内容错误" + e.getMessage(), e);
-                    //TODO 获取数据库中的数据内容错误，抛出相应错误
-                    throw new RuntimeException();
-                }
-                dataMap.put(columnDTO.getColumnName(), dataValue);
-            });
-            dataMap.clear();
-            return itemData;
-        }, requestExcelDTO.getSqlParams());
-        return result;
+        DataSourceType activeDataSourceType = DataSourceHolder.getActiveDataSourceType();
+        switch (activeDataSourceType) {
+            case MYSQL:
+                return getExcelContentDataInMysql(requestExcelDTO);
+            case MONGODB:
+                return getExcelContentDataInMongo(requestExcelDTO);
+            default:
+                throw new BusinessException(DATABASE_TYPE_ERROR);
+        }
     }
 
     /**

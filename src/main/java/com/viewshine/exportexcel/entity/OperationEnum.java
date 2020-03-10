@@ -16,14 +16,14 @@ public enum OperationEnum {
     ADD(2, '+', BigDecimal::add),
     SUBTRACT(2, '-', BigDecimal::subtract),
     MULTI(1, '*', BigDecimal::multiply),
-    DIVIDE(1, '/', BigDecimal::divide);
-//    LEFT_PARENTHESIS(3, '(', null),
-//    RIGHT_PARENTHESIS(0, ')', null);
+    DIVIDE(1, '/', BigDecimal::divide),
+    LEFT_PARENTHESIS(3, '(', null),
+    RIGHT_PARENTHESIS(0, ')', null);
 
     private static final Logger logger = LoggerFactory.getLogger(OperationEnum.class);
 
     /**
-     * 表示优先级
+     * 表示优先级，数值越小优先级越大
      */
     private final int order;
 
@@ -54,7 +54,8 @@ public enum OperationEnum {
      */
     public boolean isCompute(OperationEnum preOperation) {
         if (preOperation == null) {
-            return false;
+            logger.error("传入的操作符为NULL，请检查。");
+            throw new IllegalArgumentException("传入的操作符为NULL，请检查。");
         }
         return this.order >= preOperation.order;
     }

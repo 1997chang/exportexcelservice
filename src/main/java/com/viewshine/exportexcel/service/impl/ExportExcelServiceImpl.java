@@ -3,6 +3,7 @@ package com.viewshine.exportexcel.service.impl;
 import cn.viewshine.cloudthree.excel.ExcelFactory;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.util.TypeUtils;
 import com.viewshine.exportexcel.datasource.MongoDataSourceRouting;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
@@ -37,12 +38,11 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -84,10 +84,6 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     public ResultVO<ExportExcelVo> exportExcelToDisk(RequestExcelDTO requestExcelDTO, HttpServletRequest request) {
         String relativeFilePath = CommonUtils.generateExcelFileName(requestExcelDTO.getExportDirectory(),
                 requestExcelDTO.getFilePrefix());
-
-//        if (StringUtils.isNotBlank(requestExcelDTO.getDatasource())) {
-//            DataSourceHolder.setActiveDataSourceName(requestExcelDTO.getDatasource());
-//        }
         DataSourceType activeDataSourceType = DataSourceHolder.getActiveDataSourceType();
         String finalSelectDataSourceName = DataSourceHolder.getActiveDataSourceName();
 
@@ -203,7 +199,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
             throw new BusinessException(NO_COLLECTION_MONGO);
         }
         String dataSourceName = DataSourceHolder.getActiveDataSourceName();
-        if (StringUtils.isBlank(dataSourceName) || mongoDataSourceRouting.getDatasources().containsKey(dataSourceName)) {
+        if (StringUtils.isBlank(dataSourceName) || !mongoDataSourceRouting.getDatasources().containsKey(dataSourceName)) {
             logger.error("提供的数据库名[{}]为空或者Mongo路由不包含这个数据库名称", dataSourceName);
             throw new BusinessException(DATASOURCE_NAME_ERROR);
         }
@@ -244,17 +240,20 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                     .filter(columnDTO -> StringUtils.isNotBlank(columnDTO.getColumnName()))
                     .map(columnDTO -> {
                         if (MapUtils.isNotEmpty(columnDTO.getMapping())) {
-                            return columnDTO.getMapping()
-                                    .getOrDefault(entry.get(columnDTO.getColumnName()).toString(), "");
+                            String columnValue = Objects.toString(entry.getOrDefault(columnDTO.getColumnName(), ""), "");
+                            return columnDTO.getMapping().getOrDefault(columnValue, "");
                         } else if (StringUtils.isNotBlank(columnDTO.getFormula())) {
                             return CommonUtils.computeFormula(columnDTO.getFormula(), entry).toPlainString();
                         } else if (StringUtils.isNotBlank(columnDTO.getFormat())) {
-                            //TODO 处理日期
-                            return "";
+                            return Optional.ofNullable(TypeUtils.castToTimestamp(
+                                    entry.getOrDefault(columnDTO.getColumnName(), null)))
+                                    .map(Timestamp::toLocalDateTime)
+                                    .map(time -> time.format(DateTimeFormatter.ofPattern(columnDTO.getFormat())))
+                                    .orElse("");
                         } else {
-                            return entry.getOrDefault(columnDTO.getColumnName(), "").toString();
+                            return Objects.toString(entry.getOrDefault(columnDTO.getColumnName(), ""), "");
                         }
-                    }).collect(Collectors.toList())
+                    }).collect(toList())
         ).collect(Collectors.toList());
     }
 

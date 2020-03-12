@@ -19,6 +19,8 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static com.viewshine.exportexcel.constants.DataSourceConstants.*;
+import static com.viewshine.exportexcel.entity.OperationEnum.LEFT_PARENTHESIS;
+import static com.viewshine.exportexcel.entity.OperationEnum.RIGHT_PARENTHESIS;
 
 /**
  * 一些常用的工具类
@@ -94,37 +96,35 @@ public final class CommonUtils {
         int currentIndex = 0;
         int formulaLength = formula.length();
         boolean addNumber = true;
-        while (currentIndex < formulaLength) {
-            if (operationMap.containsKey(formula.charAt(currentIndex))) {
-                OperationEnum currentOperation = operationMap.get(formula.charAt(currentIndex));
-                if (currentOperation == OperationEnum.LEFT_PARENTHESIS) {
-                    operation.push(currentOperation);
-                    currentIndex++;
-                    startIndex = currentIndex;
-                    continue;
-                }
+        for (; currentIndex < formulaLength; currentIndex ++) {
+            if (!operationMap.containsKey(formula.charAt(currentIndex))) {
+                continue;
+            }
+            OperationEnum currentOperation = operationMap.get(formula.charAt(currentIndex));
+            if (currentOperation != LEFT_PARENTHESIS && currentOperation != RIGHT_PARENTHESIS) {
                 if (addNumber) {
                     String operationNum = StringUtils.deleteWhitespace(formula.substring(startIndex, currentIndex));
                     numberStack.add(new BigDecimal(values.getOrDefault(operationNum, operationNum).toString()));
                 }
-                addNumber = true;
-                if (currentOperation == OperationEnum.RIGHT_PARENTHESIS) {
-                    while (operation.peek() != OperationEnum.LEFT_PARENTHESIS) {
-                        numberStack.push(operation.pop().compute(numberStack.pop(), numberStack.pop()));
-                    }
-                    operation.pop();
-                    addNumber = false;
-                    currentIndex++;
-                    startIndex = currentIndex;
-                    continue;
-                }
                 if (!operation.isEmpty() && currentOperation.isCompute(operation.peek())) {
                     numberStack.push(operation.pop().compute(numberStack.pop(), numberStack.pop()));
                 }
-                operation.push(currentOperation);
+                addNumber = true;
+            } else if (currentOperation == RIGHT_PARENTHESIS) {
+                if (addNumber) {
+                    String operationNum = StringUtils.deleteWhitespace(formula.substring(startIndex, currentIndex));
+                    numberStack.add(new BigDecimal(values.getOrDefault(operationNum, operationNum).toString()));
+                }
+                addNumber =false;
+                while (operation.peek() != LEFT_PARENTHESIS) {
+                    numberStack.push(operation.pop().compute(numberStack.pop(), numberStack.pop()));
+                }
+                operation.pop();
                 startIndex = currentIndex + 1;
+                continue;
             }
-            currentIndex++;
+            operation.push(currentOperation);
+            startIndex = currentIndex + 1;
         }
         if (startIndex < formulaLength) {
             String operationNum = StringUtils.deleteWhitespace(formula.substring(startIndex, currentIndex));

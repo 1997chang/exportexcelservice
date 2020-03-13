@@ -17,12 +17,13 @@ NGINX的配置文件最终结果为：
 proxy_set_header X-Real-IP $remote_addr;
 proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 ```
-##升级版本：
-####Excel导出服务0.3版本
-#####添加功能：
+
+## 升级版本：
+#### Excel导出服务0.3版本
+##### 添加功能：
     1.使用Guava-retry框架，进行客户端通知失败的重试禁止
     2.使用服务重启，自动删除过期的文件内容，从而造成文件的推挤
     3.添加Mongo的NOSQL的支持，并且可以配置多个Mongo连接
     4.优化日期的处理
-####Excel导出服务0.1版本
+#### Excel导出服务0.1版本
     1.添加MYSQL数据库的支持，并且可以配置多个数据源

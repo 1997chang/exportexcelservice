@@ -42,6 +42,11 @@ public class DataSourceConstants {
     public static final String DELETE_FILE_REDIS_PREFIX = "delete.file.";
 
     /**
+     * 通知客户端下载完成的Redis前缀
+     */
+    public static final String CALLBACK_CLIENT_ERROR = "callback.client.error.";
+
+    /**
      * 表示回调通知的地址
      */
     public static final String DOWNLOAD_CALLBACK_PATH = "/export/excel/start/callback";

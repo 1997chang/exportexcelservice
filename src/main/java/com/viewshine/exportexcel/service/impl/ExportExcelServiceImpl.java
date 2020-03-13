@@ -4,8 +4,10 @@ import cn.viewshine.cloudthree.excel.ExcelFactory;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
+import com.github.rholder.retry.*;
 import com.viewshine.exportexcel.config.AddDeleteFileConfig;
 import com.viewshine.exportexcel.datasource.MongoDataSourceRouting;
+import com.viewshine.exportexcel.entity.CallbackExcelError;
 import com.viewshine.exportexcel.entity.DeleteFile;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
@@ -41,11 +43,10 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import static com.viewshine.exportexcel.constants.DataSourceConstants.DELETE_FILE_REDIS_PREFIX;
-import static com.viewshine.exportexcel.constants.DataSourceConstants.EXPORT_EXCEL_REDIS_PREFIX;
+import static com.viewshine.exportexcel.constants.DataSourceConstants.*;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.DOWNLOADING;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.FINISHED;
 import static com.viewshine.exportexcel.exceptions.enums.BusinessErrorCode.*;
@@ -72,6 +73,9 @@ public class ExportExcelServiceImpl implements ExportExcelService {
 
     @Value("${export.excel.docFilePath}")
     private String docFilePath;
+
+    @Value("${export.excel.callback.stopTime:24}")
+    private Long stopTime;
 
     @Autowired
     private RedisUtils redisUtils;
@@ -148,11 +152,11 @@ public class ExportExcelServiceImpl implements ExportExcelService {
      * 当文件下载完成之后执行的业务逻辑
      * 1.将文件信息更新保存到Redis中，并设置过期时间
      * 2.将删除文件到延迟任务中，从而删除文件，并将删除文件
-     * 3.通知请求方，提示下载完成
+     * 3.通知请求方，提示下载完成，可能触发失败重试机制
      */
     private void downloadDoThing(String filePath, int saveDayCount, String host, Integer thriftPort,
                                  ExportExcelVo exportExcelVo) {
-        ExportExcelVo clone = null;
+        ExportExcelVo clone;
         try {
             clone = exportExcelVo.clone();
         } catch (CloneNotSupportedException e) {
@@ -169,9 +173,38 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         Message message = new Message();
         message.setExcelId(clone.getExcelId());
         message.setUrl(clone.getUrl());
-        boolean success = ExcelCallbackSocket.executeExcelBack(host, thriftPort, message);
-        if (!success) {
-            logger.error("执行回调失败");
+        callbackClient(host, thriftPort, message);
+    }
+
+    /**
+     *  进行失败重试机制，通知客户端
+     * @param host 客户端的主机
+     * @param thriftPort 客户端的端口
+     * @param message 通知的内容
+     */
+    private void callbackClient(String host, Integer thriftPort, Message message) {
+        Retryer<Boolean> retryer = RetryerBuilder.<Boolean>newBuilder()
+                .retryIfResult(aBoolean -> Objects.equals(aBoolean, false)) //返回结果为false，进行重试
+                .withRetryListener(new RetryListener() {
+                    @Override
+                    public <V> void onRetry(Attempt<V> attempt) {
+                        V result = attempt.getResult();
+                        if (Objects.equals(result, false)) {
+                            logger.warn("第[{}]次通知客户端失败，准备尝试再次通知客户端", attempt.getAttemptNumber());
+                        }
+                    }
+                })
+                .withWaitStrategy(WaitStrategies.exponentialWait(200, 2, TimeUnit.HOURS))
+                .withStopStrategy(StopStrategies.stopAfterDelay(stopTime, TimeUnit.HOURS))
+                .build();
+        try {
+            retryer.call(() -> ExcelCallbackSocket.executeExcelBack(host, thriftPort, message));
+        } catch (ExecutionException | RetryException e) {
+            redisUtils.set(CALLBACK_CLIENT_ERROR, new CallbackExcelError(host, thriftPort, message.getExcelId(),
+                    message.getUrl()));
+            logger.error("最终通知客户端也失败了，客户端Host：[{}]，Port：[{}]，ExcelId：[{}]，URL：[{}]",
+                    host, thriftPort, message.getExcelId(), message.getUrl());
+            logger.error(e.getMessage(), e);
         }
     }
 
@@ -257,7 +290,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                             return Objects.toString(entry.getOrDefault(columnDTO.getColumnName(), ""), "");
                         }
                     }).collect(toList())
-        ).collect(Collectors.toList());
+        ).collect(toList());
     }
 
     /**
@@ -299,7 +332,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                     } else {
                         return excelColumnDTO.getExcelHeadName();
                     }
-                }).collect(Collectors.toList());
+                }).collect(toList());
     }
 
     /**

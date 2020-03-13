@@ -61,14 +61,11 @@ public class ExcelCallbackSocket {
             if (callback.getCode() == 200) {
                 logger.info("Excel文件下载通知客户端成功。");
                 return true;
-            } else {
-                logger.error("消息通知客户端出现错误，没有返回200，返回的内容为：{}", JSON.toJSONString(callback));
-                return false;
             }
+            logger.warn("消息通知客户端出现错误，没有返回200，返回的内容为：{}", JSON.toJSONString(callback));
         } catch (TException e) {
-            e.printStackTrace();
-            logger.error("执行消息通知出现错误。host:[{}]，port:[{}]", host, port);
-            logger.error(e.getMessage(), e);
+            logger.warn("执行消息通知出现错误。host:[{}]，port:[{}]", host, port);
+            logger.warn(e.getMessage(), e);
         } finally {
             if (Objects.nonNull(excelCallbackSocket.tTransport)) {
                 excelCallbackSocket.tTransport.close();

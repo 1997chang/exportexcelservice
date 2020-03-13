@@ -4,7 +4,9 @@ import cn.viewshine.cloudthree.excel.ExcelFactory;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
+import com.viewshine.exportexcel.config.AddDeleteFileConfig;
 import com.viewshine.exportexcel.datasource.MongoDataSourceRouting;
+import com.viewshine.exportexcel.entity.DeleteFile;
 import com.viewshine.exportexcel.entity.ExcelColumnDTO;
 import com.viewshine.exportexcel.entity.RequestExcelDTO;
 import com.viewshine.exportexcel.entity.enums.DataSourceType;
@@ -35,17 +37,14 @@ import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static com.viewshine.exportexcel.constants.DataSourceConstants.DELETE_FILE_REDIS_PREFIX;
 import static com.viewshine.exportexcel.constants.DataSourceConstants.EXPORT_EXCEL_REDIS_PREFIX;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.DOWNLOADING;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.FINISHED;
@@ -80,6 +79,9 @@ public class ExportExcelServiceImpl implements ExportExcelService {
     @Autowired
     private TaskScheduler deleteExcelScheduler;
 
+    @Autowired
+    private AddDeleteFileConfig addDeleteFileConfig;
+
     @Override
     public ResultVO<ExportExcelVo> exportExcelToDisk(RequestExcelDTO requestExcelDTO, HttpServletRequest request) {
         String relativeFilePath = CommonUtils.generateExcelFileName(requestExcelDTO.getExportDirectory(),
@@ -94,6 +96,8 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         exportExcelVo.setUrl(CommonUtils.getExportUrl(request, exportExcelVo.getExcelId(),
                 requestExcelDTO.getExportUrlPrefix()));
         String clientHost = getClientHost(request);
+        //保存到Redis中，设置为下载状态
+        redisUtils.set(EXPORT_EXCEL_REDIS_PREFIX + exportExcelVo.getExcelId(), exportExcelVo);
         exportExcelTaskExecutor.execute(() -> {
             try {
                 logger.info("最终选择的数据库类型：[{}]", activeDataSourceType.getCName());
@@ -116,8 +120,6 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 exportErrorHandle(exportExcelVo);
             }
         });
-        //保存到Redis中，设置为下载状态
-        redisUtils.set(EXPORT_EXCEL_REDIS_PREFIX + exportExcelVo.getExcelId(), exportExcelVo);
         return ResultVO.successResult(exportExcelVo);
     }
 
@@ -144,9 +146,9 @@ public class ExportExcelServiceImpl implements ExportExcelService {
 
     /**
      * 当文件下载完成之后执行的业务逻辑
-     * 1.将内容保存到Redis中
-     * 2.将删除文件到延迟任务中，从而删除文件
-     * 3.通知请求放，提示下载完成
+     * 1.将文件信息更新保存到Redis中，并设置过期时间
+     * 2.将删除文件到延迟任务中，从而删除文件，并将删除文件
+     * 3.通知请求方，提示下载完成
      */
     private void downloadDoThing(String filePath, int saveDayCount, String host, Integer thriftPort,
                                  ExportExcelVo exportExcelVo) {
@@ -156,12 +158,13 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         } catch (CloneNotSupportedException e) {
             logger.error("克隆对象失败，{}", JSON.toJSONString(exportExcelVo));
             e.printStackTrace();
+            throw new BusinessException(CLONE_OBJECT_ERROR);
         }
         clone.setStatus(FINISHED);
 
-        redisUtils.set(EXPORT_EXCEL_REDIS_PREFIX + exportExcelVo.getExcelId(),clone , saveDayCount, TimeUnit.DAYS);
+        redisUtils.set(EXPORT_EXCEL_REDIS_PREFIX + exportExcelVo.getExcelId(), clone , saveDayCount, TimeUnit.DAYS);
 
-        deleteFileOnSchedule(filePath, saveDayCount);
+        deleteFileOnSchedule(filePath, saveDayCount, exportExcelVo.getExcelId());
 
         Message message = new Message();
         message.setExcelId(clone.getExcelId());
@@ -309,20 +312,19 @@ public class ExportExcelServiceImpl implements ExportExcelService {
 
     /**
      * 定时删除文件
+     *  1.向Redis中添加一条删除记录，用于避免删除系统重启而没有删除文件，造成定时任务无法执行
+     *  2.向定时执行器中添加一个任务
      * @param filePath 文件所在地址
      * @param saveDayCount 保存的天数
+     * @param excelUUID Excel文件的唯一标识
      */
-    private void deleteFileOnSchedule(String filePath, int saveDayCount) {
-        LocalDateTime deleteFIle = LocalDateTime.now().plusDays(saveDayCount);
-        deleteExcelScheduler.schedule(() -> {
-            try {
-                Files.deleteIfExists(Paths.get(filePath));
-            } catch (IOException e) {
-                logger.error("删除文件失败，请检查，文件名为：[{}]", filePath);
-                logger.error(e.getMessage(), e);
-                throw new BusinessException(DELETE_FILE_ERROR);
-            }
-        }, deleteFIle.toInstant(ZoneOffset.ofHours(8)));
+    private void deleteFileOnSchedule(String filePath, int saveDayCount, String excelUUID) {
+        LocalDateTime deleteTime = LocalDateTime.now().plusDays(saveDayCount);
+        logger.info("准备在[{}]时间删除[{}]文件",
+                deleteTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")), filePath);
+        DeleteFile deleteFile = new DeleteFile(excelUUID, filePath, deleteTime);
+        redisUtils.set(DELETE_FILE_REDIS_PREFIX + excelUUID, deleteFile);
+        addDeleteFileConfig.deleteFile(deleteFile);
     }
 
 }

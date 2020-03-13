@@ -37,6 +37,11 @@ public class DataSourceConstants {
     public static final String EXPORT_EXCEL_REDIS_PREFIX = "export.excel.download.";
 
     /**
+     * 保存要删除的File对象
+     */
+    public static final String DELETE_FILE_REDIS_PREFIX = "delete.file.";
+
+    /**
      * 表示回调通知的地址
      */
     public static final String DOWNLOAD_CALLBACK_PATH = "/export/excel/start/callback";

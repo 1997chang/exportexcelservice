@@ -13,6 +13,7 @@ public enum BusinessErrorCode {
 
     PARAM_ILLEGAL(10_0001, "参数值无效"),
     FORMULA_ERROR(10_0002, "计算表达式错误"),
+    CLONE_OBJECT_ERROR(10_0003, "克隆失败"),
 
     SELECT_DATA_MYSQL(40_0001, "查询MYSQL数据异常"),
     SELECT_DATA_MONGO(40_0002, "查询MONGO数据异常"),

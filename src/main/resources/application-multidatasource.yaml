@@ -5,7 +5,7 @@ spring:
         one:
           username: root
           password: root
-          url: jdbc:mysql://localhost:3306/shiro
+          url: jdbc:mysql://192.168.18.183:3306/db_cloud_manage
           filters: wall,stat
           stat-view-servlet:
             enabled: true
@@ -29,8 +29,8 @@ spring:
                 multi-statement-allow: true
         two:
           username: root
-          password: Mysql@106966
-          url: jdbc:mysql://localhost:3306/test2
+          password: root
+          url: jdbc:mysql://192.168.18.183:3306/db_cloud_manage
           filters: wall,stat
           stat-view-servlet:
             enabled: true

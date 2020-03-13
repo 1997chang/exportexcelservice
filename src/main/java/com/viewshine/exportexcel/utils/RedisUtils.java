@@ -6,6 +6,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -39,6 +40,10 @@ public class RedisUtils {
     public <T> List<T> getList(String key, Class<T> zclass) {
         String value = stringRedisTemplate.opsForValue().get(key);
         return JSON.parseArray(value, zclass);
+    }
+
+    public Set<String> getKeys(String prefix) {
+        return stringRedisTemplate.keys(prefix);
     }
 
     public Boolean exits(String key) {

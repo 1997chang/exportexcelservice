@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<configuration scan="true" scanPeriod="10 seconds">
+
+    <conversionRule conversionWord="clr" converterClass="org.springframework.boot.logging.logback.ColorConverter" />
+    <conversionRule conversionWord="wex" converterClass="org.springframework.boot.logging.logback.WhitespaceThrowableProxyConverter" />
+    <conversionRule conversionWord="wEx" converterClass="org.springframework.boot.logging.logback.ExtendedWhitespaceThrowableProxyConverter" />
+
+    <property name="PATTERN_FILE"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level ${PID} --- [%20.20(%thread)] %-40.40(%logger{40})
+                : %msg%n" />
+    <property name="PATTERN_CONSOLE"
+              value="${CONSOLE_LOG_PATTERN:-%clr(%d{yyyy-MM-dd HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr(${PID:- }){magenta} %clr(---){faint} %clr([%15.15t]){faint} %clr(%-40.40logger{39}){cyan} %clr(:){faint} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}}" />
+    <property name="ENCODING" value="UTF-8"/>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${PATTERN_CONSOLE}}</pattern>
+            <charset>${ENCODING}</charset>
+        </encoder>
+    </appender>
+
+    <appender name="ROLL_ERROR" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/excel-export-error.%d.%i.log</fileNamePattern>
+            <maxHistory>10</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+            <maxFileSize>300MB</maxFileSize>
+        </rollingPolicy>
+        <filter class="ch.qos.logback.classic.filter.LevelFilter">
+            <level>ERROR</level>
+            <onMatch>ACCEPT</onMatch>
+            <onMismatch>DENY</onMismatch>
+        </filter>
+        <encoder>
+            <pattern>${PATTERN_FILE}}</pattern>
+            <charset>${ENCODING}</charset>
+        </encoder>
+    </appender>
+
+    <appender name="ROLL_INFO" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>logs/excel-export-info.%d.%i.log</fileNamePattern>
+            <maxHistory>10</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+            <maxFileSize>300MB</maxFileSize>
+        </rollingPolicy>
+        <encoder>
+            <pattern>${PATTERN_FILE}}</pattern>
+            <charset>${ENCODING}</charset>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+        <appender-ref ref="ROLL_INFO"/>
+        <appender-ref ref="ROLL_ERROR"/>
+    </root>
+    <logger name="com.viewshine" level="DEBUG">
+
+    </logger>
+
+<!--    <springProfile name="dev">
+        <root level="INFO">
+            <appender-ref ref="STDOUT" />
+            <appender-ref ref="ROLL_INFO"/>
+            <appender-ref ref="ROLL_ERROR"/>
+        </root>
+        <logger name="com.viewshine" level="DEBUG">
+
+        </logger>
+    </springProfile>
+
+
+    <springProfile name="pro">
+        <root level="WARN">
+            <appender-ref ref="STDOUT" />
+            <appender-ref ref="ROLL_INFO"/>
+            <appender-ref ref="ROLL_ERROR"/>
+        </root>
+        <logger name="com.viewshine" level="INFO">
+
+        </logger>
+    </springProfile>-->
+
+
+</configuration>

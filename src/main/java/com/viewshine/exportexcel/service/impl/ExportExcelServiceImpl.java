@@ -277,7 +277,7 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                     .map(columnDTO -> {
                         if (MapUtils.isNotEmpty(columnDTO.getMapping())) {
                             String columnValue = Objects.toString(entry.getOrDefault(columnDTO.getColumnName(), ""), "");
-                            return columnDTO.getMapping().getOrDefault(columnValue, "");
+                            return columnDTO.getMapping().getOrDefault(columnValue, columnValue);
                         } else if (StringUtils.isNotBlank(columnDTO.getFormula())) {
                             return CommonUtils.computeFormula(columnDTO.getFormula(), entry).toPlainString();
                         } else if (StringUtils.isNotBlank(columnDTO.getFormat())) {

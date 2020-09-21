@@ -7,6 +7,7 @@ import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.NotNull;
 import java.util.List;
+import java.util.Map;
 
 /**
  * HTTP请求导出Excel的参数
@@ -70,5 +71,31 @@ public class RequestExcelDTO {
      * 指定导出文件的地址，如果为空的话，使用当前请求的URL地址
      */
     private String exportUrlPrefix;
+
+    /**
+     * 导出查询参数
+     */
+    private Map<String,Object> params;
+
+    /**
+     * 是否开启分页
+     */
+    private Boolean enablePage;
+
+    /**
+     * 当前是第几页
+     */
+    private Integer currentPage;
+
+    /**
+     * 煤业多少条
+     */
+    private Integer pageSize;
+
+    public RequestExcelDTO() {
+        enablePage = true;
+        currentPage = 1;
+        pageSize = 10_000;
+    }
 
 }

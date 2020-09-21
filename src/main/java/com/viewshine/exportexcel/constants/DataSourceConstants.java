@@ -66,6 +66,22 @@ public class DataSourceConstants {
      */
     public static final String LOCAL_HOST = "127.0.0.1";
 
+
+    /**
+     * MONGO的排序字段
+     */
+    public static final String MONGO_SORT = "sortObject";
+
+    /**
+     * Mongo的查询字段
+     */
+    public static final String MONGO_QUERY = "queryObject";
+
+    /**
+     * MongoDB的筛选字段
+     */
+    public static final String MONGO_FIELD = "fieldsObject";
+
     /**
      * 未知的请求地址
      */

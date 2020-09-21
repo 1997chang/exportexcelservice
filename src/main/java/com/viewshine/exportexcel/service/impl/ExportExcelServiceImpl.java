@@ -1,6 +1,7 @@
 package com.viewshine.exportexcel.service.impl;
 
 import cn.viewshine.cloudthree.excel.ExcelFactory;
+import com.alibaba.druid.sql.PagerUtils;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.util.TypeUtils;
@@ -25,12 +26,14 @@ import com.viewshine.exportexcel.utils.RedisUtils;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.MapUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.bson.Document;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.mongodb.core.MongoOperations;
+import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.lang.NonNull;
@@ -47,6 +50,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static com.viewshine.exportexcel.constants.DataSourceConstants.*;
+import static com.viewshine.exportexcel.constants.DataSourceConstants.MONGO_SORT;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.DOWNLOADING;
 import static com.viewshine.exportexcel.entity.enums.ExcelDownloadStatus.FINISHED;
 import static com.viewshine.exportexcel.exceptions.enums.BusinessErrorCode.*;
@@ -108,14 +112,20 @@ public class ExportExcelServiceImpl implements ExportExcelService {
                 logger.info("最终选择的数据库为：{}", finalSelectDataSourceName);
                 DataSourceHolder.setActiveDataSourceName(finalSelectDataSourceName);
                 DataSourceHolder.setActiveDataSourceType(activeDataSourceType);
-                logger.info("准备将数据导出到Excel中");
-                List<List<String>> excelContentData = getExcelContentData(requestExcelDTO);
-                logger.info("查询出来的数据内容为：[{}]", JSON.toJSONString(excelContentData));
+                List<List<String>> excelContentData;
+                String filePath = getFileSavePath(relativeFilePath);
                 List<List<String>> excelHeadName = getExcelHeadName(requestExcelDTO.getExcelColumnDTOList());
                 logger.info("Excel表格的头数据内容：[{}]", JSON.toJSONString(excelHeadName));
-                String filePath = getFileSavePath(relativeFilePath);
-                ExcelFactory.writeExcel(Collections.singletonMap("sheet1", excelContentData),
-                        Collections.singletonMap("sheet1", excelHeadName), filePath);
+                boolean continueNextPage = requestExcelDTO.getEnablePage();
+                do {
+                    logger.info("准备将数据导出到Excel中");
+                    excelContentData = getExcelContentData(requestExcelDTO);
+                    logger.debug("查询出来的数据内容为：[{}]", JSON.toJSONString(excelContentData));
+                    ExcelFactory.writeExcel(Collections.singletonMap("sheet1", excelContentData),
+                            Collections.singletonMap("sheet1", excelHeadName), filePath);
+                    continueNextPage = continueNextPage && CollectionUtils.isNotEmpty(excelContentData)
+                            && excelContentData.size() == requestExcelDTO.getPageSize();
+                } while (continueNextPage);
                 logger.info("ExcelID：[{}]的文件导出成功，最终的文件路径地址；[{}]", exportExcelVo.getExcelId(), filePath);
                 downloadDoThing(filePath, requestExcelDTO.getSaveDay(), clientHost,
                         requestExcelDTO.getThriftPort(), exportExcelVo);
@@ -241,7 +251,16 @@ public class ExportExcelServiceImpl implements ExportExcelService {
         }
         logger.info("准备在MONGO的[{}]数据库中的[{}]集合中上执行查询语句", dataSourceName, collectionName);
         MongoOperations mongoOperations = mongoDataSourceRouting.getDatasources().get(dataSourceName);
-        Query query = JSONObject.parseObject(requestExcelDTO.getSql(), Query.class);
+
+        JSONObject querySql = JSONObject.parseObject(requestExcelDTO.getSql());
+        BasicQuery query = new BasicQuery(Document.parse(querySql.getString(MONGO_QUERY)));
+        query.setSortObject(Document.parse(querySql.getString(MONGO_SORT)));
+        if (requestExcelDTO.getEnablePage()) {
+            query.skip((requestExcelDTO.getCurrentPage() - 1) * requestExcelDTO.getPageSize());
+            query.limit(requestExcelDTO.getPageSize());
+            requestExcelDTO.setCurrentPage(requestExcelDTO.getCurrentPage() + 1);
+        }
+        logger.debug("在MongoDB数据库上执行导出服务，指定的SQL语句为：[{}]", JSONObject.toJSON(query));
         List<Map<String, Object>> dataContent = mongoOperations.find(query, JSONObject.class, collectionName)
                 .stream().map(json -> (Map<String, Object>) json).collect(toList());
         return getFinishExcelData(requestExcelDTO, dataContent);
@@ -253,10 +272,15 @@ public class ExportExcelServiceImpl implements ExportExcelService {
      * @return 返回查询的结果
      */
     private List<List<String>> getExcelContentDataInMysql(final RequestExcelDTO requestExcelDTO) {
+        String sql = requestExcelDTO.getSql();
+        if (requestExcelDTO.getEnablePage()) {
+            int offset = (requestExcelDTO.getCurrentPage() - 1) * requestExcelDTO.getPageSize();
+            sql = PagerUtils.limit(sql, "mysql", offset, requestExcelDTO.getPageSize());
+            requestExcelDTO.setCurrentPage(requestExcelDTO.getCurrentPage() + 1);
+        }
         logger.info("在MYSQL数据库上执行导出任务，查询的SQL语句为：[{}]，参数值列表为：[{}]",
-                requestExcelDTO.getSql(), JSONObject.toJSONString(requestExcelDTO.getSqlParams()));
-        List<Map<String, Object>> dataContent =
-                jdbcTemplate.queryForList(requestExcelDTO.getSql(), requestExcelDTO.getSqlParams());
+                sql, JSONObject.toJSONString(requestExcelDTO.getSqlParams()));
+        List<Map<String, Object>> dataContent = jdbcTemplate.queryForList(sql, requestExcelDTO.getSqlParams());
         return getFinishExcelData(requestExcelDTO, dataContent);
     }
 
@@ -301,7 +325,8 @@ public class ExportExcelServiceImpl implements ExportExcelService {
      */
     @NonNull
     private List<List<String>> getExcelContentData(final RequestExcelDTO requestExcelDTO) {
-        logger.info("准备获取数据内容，执行的SQL语句为：[{}]", requestExcelDTO.getSql());
+        logger.info("准备获取数据内容，执行的SQL语句为：[{}]，是否进行分页：[{}]", requestExcelDTO.getSql(),
+                requestExcelDTO.getEnablePage());
         logger.info("最终导出的列名有：{}", requestExcelDTO.getExcelColumnDTOList().stream().
                 map(ExcelColumnDTO::getColumnName).filter(StringUtils::isNotBlank).collect(joining(",")));
         DataSourceType activeDataSourceType = DataSourceHolder.getActiveDataSourceType();
